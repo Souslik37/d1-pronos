@@ -17,17 +17,23 @@
 
   function render(root) {
     const manager = window.D1P.services.managerService.getActiveManager();
-    const matchday = window.D1P.services.seasonService.currentMatchday();
-    const matches = window.D1P.services.seasonService.matchesForMatchday(matchday);
-    const openMatches = matches.filter((m) => m.status === 'ouvert');
-    // Ce qu'il reste VRAIMENT à faire pour CE manager — pas juste "combien de
-    // matchs sont ouverts" (ça resterait affiché même après avoir tout
-    // soumis, tant que l'admin n'a pas verrouillé la journée).
-    const remainingCount = openMatches.filter((m) => window.D1P.services.predictionService.getPrediction(m.id, manager.id).winner === null).length;
+    // Toutes les journées OUVERTES à la fois, pas juste "la" journée
+    // courante — l'admin peut très bien en ouvrir plusieurs en parallèle
+    // (ex: rattraper des pronostics rétroactifs), et la carte ne doit pas
+    // dire "tout est fait" juste parce que la PREMIÈRE journée ouverte l'est,
+    // en ignorant qu'une autre journée ouverte attend encore des pronostics.
+    const openMatches = window.D1P.services.seasonService.listMatches().filter((m) => m.status === 'ouvert');
+    const unpredicted = openMatches.filter((m) => window.D1P.services.predictionService.getPrediction(m.id, manager.id).winner === null);
+    // Cible du clic : la première journée qui a encore quelque chose à faire ;
+    // sinon la première journée ouverte (tout est fait mais on peut y jeter
+    // un œil) ; sinon le calcul par défaut (calendrier fermé/à venir).
+    const targetMatchday = unpredicted.length ? unpredicted[0].matchday
+      : openMatches.length ? openMatches[0].matchday
+      : window.D1P.services.seasonService.currentMatchday();
     const matchdayText = !openMatches.length
       ? 'Pronostics fermés — voir les résultats'
-      : remainingCount
-        ? remainingCount + ' match' + (remainingCount > 1 ? 's' : '') + ' à pronostiquer'
+      : unpredicted.length
+        ? unpredicted.length + ' match' + (unpredicted.length > 1 ? 's' : '') + ' à pronostiquer'
         : 'Tous tes pronostics sont faits ✅';
     const seasonLocked = window.D1P.services.seasonPredictionService.isSeasonLocked();
     const seasonPrediction = window.D1P.services.seasonPredictionService.getSeasonPrediction(manager.id);
@@ -39,7 +45,7 @@
     ]));
 
     const grid = el('div', { className: 'dash-grid' }, [
-      quickCard('🎯', 'Journée ' + matchday, matchdayText, () => { window.D1P.pages.matchday.goTo(matchday); window.location.hash = '#matchday'; }),
+      quickCard('🎯', 'Journée ' + targetMatchday, matchdayText, () => { window.D1P.pages.matchday.goTo(targetMatchday); window.location.hash = '#matchday'; }),
       quickCard('🔮', 'Ma saison', seasonLocked ? (seasonPrediction ? 'Pronostic verrouillé — voir le détail' : 'Saison commencée, trop tard') : (seasonPrediction ? 'Modifier mon pronostic' : 'Pas encore fait — à faire avant le coup d\'envoi !'), () => { window.location.hash = '#season'; }),
       quickCard('🏆', 'Classement', 'Le vrai classement du championnat, et qui devine le mieux', () => { window.location.hash = '#standings'; }),
     ]);
