@@ -19,7 +19,16 @@
     const manager = window.D1P.services.managerService.getActiveManager();
     const matchday = window.D1P.services.seasonService.currentMatchday();
     const matches = window.D1P.services.seasonService.matchesForMatchday(matchday);
-    const openCount = matches.filter((m) => m.status === 'ouvert').length;
+    const openMatches = matches.filter((m) => m.status === 'ouvert');
+    // Ce qu'il reste VRAIMENT à faire pour CE manager — pas juste "combien de
+    // matchs sont ouverts" (ça resterait affiché même après avoir tout
+    // soumis, tant que l'admin n'a pas verrouillé la journée).
+    const remainingCount = openMatches.filter((m) => window.D1P.services.predictionService.getPrediction(m.id, manager.id).winner === null).length;
+    const matchdayText = !openMatches.length
+      ? 'Pronostics fermés — voir les résultats'
+      : remainingCount
+        ? remainingCount + ' match' + (remainingCount > 1 ? 's' : '') + ' à pronostiquer'
+        : 'Tous tes pronostics sont faits ✅';
     const seasonLocked = window.D1P.services.seasonPredictionService.isSeasonLocked();
     const seasonPrediction = window.D1P.services.seasonPredictionService.getSeasonPrediction(manager.id);
 
@@ -30,7 +39,7 @@
     ]));
 
     const grid = el('div', { className: 'dash-grid' }, [
-      quickCard('🎯', 'Journée ' + matchday, openCount ? openCount + ' match' + (openCount > 1 ? 's' : '') + ' à pronostiquer' : 'Pronostics fermés — voir les résultats', () => { window.D1P.pages.matchday.goTo(matchday); window.location.hash = '#matchday'; }),
+      quickCard('🎯', 'Journée ' + matchday, matchdayText, () => { window.D1P.pages.matchday.goTo(matchday); window.location.hash = '#matchday'; }),
       quickCard('🔮', 'Ma saison', seasonLocked ? (seasonPrediction ? 'Pronostic verrouillé — voir le détail' : 'Saison commencée, trop tard') : (seasonPrediction ? 'Modifier mon pronostic' : 'Pas encore fait — à faire avant le coup d\'envoi !'), () => { window.location.hash = '#season'; }),
       quickCard('🏆', 'Classement', 'Le vrai classement du championnat, et qui devine le mieux', () => { window.location.hash = '#standings'; }),
     ]);
