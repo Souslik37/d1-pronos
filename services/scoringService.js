@@ -19,6 +19,11 @@
    * perdant), +1 pt de bonus défensif pour le perdant seulement (défaite par
    * peu — voir CONFIG.points). `outcome` = { winner: 'home'|'away'|'draw',
    * bonusHome, bonusAway, closeMargin }.
+   *
+   * Règle belge : une équipe ne cumule jamais les deux bonus sur un même
+   * match — offensif OU défensif, jamais les deux, donc au plus +1 point de
+   * bonus au total même si les deux conditions sont remplies (ex: perdant à
+   * 5 points d'écart qui a aussi marqué 4 essais ou plus).
    */
   function computePoints(outcome) {
     const P = CONFIG().points;
@@ -28,13 +33,15 @@
       away = P.draw;
     } else if (outcome.winner === 'home') {
       home = P.win;
-      away = P.loss + (outcome.closeMargin ? P.closeLossPoints : 0);
+      away = P.loss;
     } else {
       away = P.win;
-      home = P.loss + (outcome.closeMargin ? P.closeLossPoints : 0);
+      home = P.loss;
     }
-    if (outcome.bonusHome) home += P.tryBonusPoints;
-    if (outcome.bonusAway) away += P.tryBonusPoints;
+    const homeHasBonus = outcome.bonusHome || (outcome.winner === 'away' && outcome.closeMargin);
+    const awayHasBonus = outcome.bonusAway || (outcome.winner === 'home' && outcome.closeMargin);
+    if (homeHasBonus) home += P.tryBonusPoints;
+    if (awayHasBonus) away += P.tryBonusPoints;
     return { home, away };
   }
 

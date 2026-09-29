@@ -83,6 +83,9 @@
       ]));
       const closeMarginRow = closeMarginRowFor();
       if (closeMarginRow) card.appendChild(closeMarginRow);
+      card.appendChild(el('div', { className: 'field-hint', style: { marginTop: '8px' } }, [
+        '⚠️ Une équipe ne cumule jamais bonus offensif et bonus défensif sur un même match (règle belge) — max +1 point de bonus, même si les deux sont cochés.',
+      ]));
       card.appendChild(preview);
       refreshPreview();
     }

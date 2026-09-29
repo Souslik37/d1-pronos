@@ -140,6 +140,7 @@
           el('div', { className: 'field' }, [el('label', {}, ['Essais ' + teamLabel(match.awayTeamId)]), triesAway]),
         ]),
         el('div', { className: 'field-hint' }, ['Les essais servent à calculer le bonus offensif (4 ou plus) — nécessaires pour un vrai classement.']),
+        el('div', { className: 'field-hint' }, ['⚠️ Une équipe ne cumule jamais bonus offensif et bonus défensif sur un même match (règle belge) — max +1 point de bonus au total.']),
       ]),
       actions: [
         { label: 'Annuler', className: 'btn-ghost' },

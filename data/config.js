@@ -25,7 +25,9 @@
     // Système de points de classement standard (rugby à XV, bonus offensif/
     // défensif) — vérifié cohérent avec les vrais classements D1 en ligne
     // (ex: une équipe à 2 victoires avec bcp d'essais marqués a bien 10 pts
-    // = 2 x (4 + 1 bonus)).
+    // = 2 x (4 + 1 bonus)). Règle belge : jamais les deux bonus cumulés sur
+    // un même match — voir scoringService.computePoints, qui plafonne à
+    // tryBonusPoints même si offensif ET défensif sont remplis.
     points: {
       win: 4,
       draw: 2,
