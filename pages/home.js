@@ -22,7 +22,7 @@
     // (ex: rattraper des pronostics rétroactifs), et la carte ne doit pas
     // dire "tout est fait" juste parce que la PREMIÈRE journée ouverte l'est,
     // en ignorant qu'une autre journée ouverte attend encore des pronostics.
-    const openMatches = window.D1P.services.seasonService.listMatches().filter((m) => m.status === 'ouvert');
+    const openMatches = window.D1P.services.seasonService.listMatches().filter((m) => window.D1P.services.seasonService.isMatchOpen(m));
     const unpredicted = openMatches.filter((m) => window.D1P.services.predictionService.getPrediction(m.id, manager.id).winner === null);
     // Cible du clic : la première journée qui a encore quelque chose à faire ;
     // sinon la première journée ouverte (tout est fait mais on peut y jeter

@@ -29,11 +29,28 @@
     return listMatches().filter((m) => m.matchday === matchday);
   }
 
-  /** La journée "ouverte" s'il y en a une, sinon la première pas encore jouée, sinon la dernière. */
+  /**
+   * Un match n'est réellement ouvert aux pronostics que si l'admin l'a
+   * ouvert ET que le coup d'envoi n'est pas encore passé (tous les matchs
+   * démarrent à CONFIG.season.kickoffHour) — le verrouillage au coup d'envoi
+   * est automatique, pas besoin que l'admin pense à cliquer "Verrouiller" à
+   * temps. Sans date connue (playoff pas encore programmé), pas de coupure
+   * automatique possible : seul le statut compte.
+   */
+  function isMatchOpen(match) {
+    if (match.status !== 'ouvert') return false;
+    if (!match.date) return true;
+    const hour = window.D1P.data.CONFIG.season.kickoffHour;
+    const [y, m, d] = match.date.split('-').map(Number);
+    const kickoff = new Date(y, m - 1, d, hour, 0, 0);
+    return new Date() < kickoff;
+  }
+
+  /** La journée "ouverte" s'il y en a une (voir isMatchOpen), sinon la première pas encore jouée, sinon la dernière. */
   function currentMatchday() {
     const matches = listMatches();
     if (!matches.length) return 1;
-    const open = matches.find((m) => m.status === 'ouvert');
+    const open = matches.find((m) => isMatchOpen(m));
     if (open) return open.matchday;
     const notPlayed = matches.find((m) => m.status !== 'termine');
     if (notPlayed) return notPlayed.matchday;
@@ -166,7 +183,7 @@
   }
 
   window.D1P.services.seasonService = {
-    listTeams, getTeam, listMatches, getMatch, matchesForMatchday, currentMatchday,
+    listTeams, getTeam, listMatches, getMatch, matchesForMatchday, currentMatchday, isMatchOpen,
     addTeam, renameTeam, setTeamLogo, addMatch, updateMatchInfo, removeMatch, setMatchdayStatus,
     finalizeMatch, unfinalizeMatch,
   };

@@ -267,7 +267,9 @@
     if (match.status === 'termine') actions.push(el('button', { className: 'btn btn-sm btn-ghost', onClick: () => confirmUnfinalize(match, rerender) }, ['Annuler résultat']));
     actions.push(el('button', { className: 'btn btn-sm btn-ghost', onClick: () => confirmRemoveMatch(match, rerender) }, ['Supprimer']));
 
-    const statusLabel = { ouvert: '🟢 Ouvert', verrouille: '🔒 Verrouillé', termine: '✅ Terminé' }[match.status];
+    // Un match "ouvert" en base peut déjà être verrouillé pour de vrai si le coup d'envoi est passé (voir seasonService.isMatchOpen) — l'admin doit le voir, pas croire qu'il faut encore cliquer "Verrouiller".
+    const autoLocked = match.status === 'ouvert' && !window.D1P.services.seasonService.isMatchOpen(match);
+    const statusLabel = autoLocked ? '🔒 Coup d\'envoi passé' : { ouvert: '🟢 Ouvert', verrouille: '🔒 Verrouillé', termine: '✅ Terminé' }[match.status];
 
     return el('div', { className: 'card', style: { display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 1fr auto auto', gap: '10px', alignItems: 'center', padding: '10px 16px', marginBottom: '6px' } }, [
       homeSelect, awaySelect, dateInput,

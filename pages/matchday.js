@@ -134,7 +134,7 @@
       el('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '750' } }, [teamBadge(match.homeTeamId), teamLabel(match.homeTeamId), el('span', { className: 'muted' }, ['vs']), teamLabel(match.awayTeamId), teamBadge(match.awayTeamId)]),
       graded
         ? el('div', { style: { fontWeight: '800' } }, [match.result.winner === 'draw' ? 'Match nul' : 'Victoire ' + teamLabel(match.result.winner === 'home' ? match.homeTeamId : match.awayTeamId)])
-        : el('div', { className: 'muted small' }, [window.D1P.utils.format.formatDateFr(match.date, { short: true }), match.status === 'ouvert' ? '' : ' · 🔒']),
+        : el('div', { className: 'muted small' }, [window.D1P.utils.format.formatDateFr(match.date, { short: true }), window.D1P.services.seasonService.isMatchOpen(match) ? '' : ' · 🔒']),
     ]));
 
     if (!hasPrediction) {
@@ -206,7 +206,7 @@
       return;
     }
 
-    const isOpen = matches[0].status === 'ouvert';
+    const isOpen = window.D1P.services.seasonService.isMatchOpen(matches[0]);
     if (isOpen) {
       const formStates = matches.map(() => ({}));
       const cards = matches.map((m, i) => buildOpenMatchCard(m, manager, formStates[i]));

@@ -27,8 +27,9 @@
    */
   function savePrediction(matchId, data) {
     const match = window.D1P.services.seasonService.getMatch(matchId);
-    if (!match || match.status !== 'ouvert') {
-      return { ok: false, reason: 'Les pronostics sont fermés pour ce match.' };
+    if (!match || !window.D1P.services.seasonService.isMatchOpen(match)) {
+      const kickoffPassed = match && match.status === 'ouvert';
+      return { ok: false, reason: kickoffPassed ? 'Les pronostics sont fermés — le coup d\'envoi est passé.' : 'Les pronostics sont fermés pour ce match.' };
     }
     if (!['home', 'away', 'draw'].includes(data.winner)) {
       return { ok: false, reason: 'Choisis qui gagne (ou un match nul).' };

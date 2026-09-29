@@ -20,6 +20,7 @@
       playoffSpots: 6, // 1er-2e : exemptés (demi direct) ; 3e-6e : quarts
       barrageRank: 8, // 8e : barrage contre le 1er de D2 (le 7e reste en D1 sans risque)
       relegatedFromRank: 9, // 9e ET 10e : descente directe en D2
+      kickoffHour: 15, // tous les matchs commencent à 15h — un match se verrouille automatiquement à cette heure le jour J (voir seasonService.isMatchOpen), même si l'admin n'a pas cliqué "Verrouiller".
     },
 
     // Système de points de classement standard (rugby à XV, bonus offensif/
