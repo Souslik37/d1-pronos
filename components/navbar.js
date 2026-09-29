@@ -7,8 +7,8 @@
 
   const NAV_ITEMS = [
     { key: 'home', icon: '🏠', label: 'Accueil' },
-    { key: 'matchday', icon: '🎯', label: 'Pronostics' },
     { key: 'season', icon: '🔮', label: 'Ma saison' },
+    { key: 'matchday', icon: '🎯', label: 'Pronostics' },
     { key: 'standings', icon: '🏆', label: 'Classement' },
     { key: 'admin', icon: '⚙️', label: 'Administration' },
   ];

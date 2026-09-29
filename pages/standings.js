@@ -11,7 +11,7 @@
   window.D1P.pages = window.D1P.pages || {};
 
   const { el } = window.D1P.utils.dom;
-  let activeTab = 'real';
+  let activeTab = 'guessers';
 
   function rankBadge(i) {
     const cls = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
@@ -87,8 +87,8 @@
     ]));
 
     const tabs = el('div', { className: 'tabs' }, [
-      el('div', { className: 'tab-btn' + (activeTab === 'real' ? ' active' : ''), onClick: () => { activeTab = 'real'; render(root); } }, ['🏉 Championnat']),
       el('div', { className: 'tab-btn' + (activeTab === 'guessers' ? ' active' : ''), onClick: () => { activeTab = 'guessers'; render(root); } }, ['🎯 Qui devine le mieux']),
+      el('div', { className: 'tab-btn' + (activeTab === 'real' ? ' active' : ''), onClick: () => { activeTab = 'real'; render(root); } }, ['🏉 Championnat']),
     ]);
     root.appendChild(tabs);
     root.appendChild(el('div', { className: 'card' }, [activeTab === 'real' ? buildRealStandings() : buildGuessersLeaderboard()]));
