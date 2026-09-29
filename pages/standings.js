@@ -3,8 +3,10 @@
  *
  * Deux vues : le VRAI classement du championnat (recalculé à partir des
  * matchs joués, jamais stocké — voir scoringService.computeStandingsTable),
- * et le compteur simple de qui devine le mieux (aucun système de points,
- * juste "X bons pronostics sur Y").
+ * et le compteur de qui devine le mieux — "X pronostics exacts sur Y" : un
+ * match ne compte que si TOUT est juste (vainqueur + les deux bonus), voir
+ * scoringService.isPredictionExact pour pourquoi (sinon cocher les bonus
+ * "au cas où" ne coûterait jamais rien).
  */
 (function () {
   window.D1P = window.D1P || {};
@@ -54,28 +56,33 @@
     const matches = window.D1P.services.seasonService.listMatches().filter((m) => m.status === 'termine' && m.result);
 
     const rows = managers.map((m) => {
-      let correct = 0, total = 0;
+      let exact = 0, total = 0;
       matches.forEach((match) => {
         const p = window.D1P.services.predictionService.getPrediction(match.id, m.id);
         if (p.winner === null) return;
         total += 1;
-        if (window.D1P.services.scoringService.isPredictionCorrect(p, match.result)) correct += 1;
+        if (window.D1P.services.scoringService.isPredictionExact(p, match.result)) exact += 1;
       });
-      return { manager: m, correct, total, pct: total ? Math.round((correct / total) * 100) : null };
-    }).sort((a, b) => b.correct - a.correct || (b.pct || 0) - (a.pct || 0));
+      return { manager: m, exact, total, pct: total ? Math.round((exact / total) * 100) : null };
+    }).sort((a, b) => b.exact - a.exact || (b.pct || 0) - (a.pct || 0));
 
     if (!matches.length) {
       return el('div', { className: 'empty-state' }, [el('div', { className: 'ic' }, ['🎯']), el('div', {}, ['Aucun match noté pour le moment — revenez après la première journée jouée.'])]);
     }
 
-    return el('table', { className: 'standings-table' }, [
-      el('thead', {}, [el('tr', {}, ['#', 'Manager', 'Bons pronostics', '%'].map((h) => el('th', {}, [h])))]),
-      el('tbody', {}, rows.map((r, i) => el('tr', {}, [
-        el('td', {}, [rankBadge(i)]),
-        el('td', { style: { fontWeight: '700' } }, [r.manager.name]),
-        el('td', { style: { fontWeight: '800', color: 'var(--green-text)' } }, [`${r.correct} / ${r.total}`]),
-        el('td', { className: 'muted' }, [r.pct === null ? '—' : r.pct + '%']),
-      ]))),
+    return el('div', {}, [
+      el('p', { className: 'field-hint', style: { marginBottom: '10px' } }, [
+        'Un match ne compte que si tout est deviné juste — vainqueur ET bonus (voir l\'onglet Règles).',
+      ]),
+      el('table', { className: 'standings-table' }, [
+        el('thead', {}, [el('tr', {}, ['#', 'Manager', 'Pronostics exacts', '%'].map((h) => el('th', {}, [h])))]),
+        el('tbody', {}, rows.map((r, i) => el('tr', {}, [
+          el('td', {}, [rankBadge(i)]),
+          el('td', { style: { fontWeight: '700' } }, [r.manager.name]),
+          el('td', { style: { fontWeight: '800', color: 'var(--green-text)' } }, [`${r.exact} / ${r.total}`]),
+          el('td', { className: 'muted' }, [r.pct === null ? '—' : r.pct + '%']),
+        ]))),
+      ]),
     ]);
   }
 

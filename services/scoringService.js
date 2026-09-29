@@ -64,10 +64,30 @@
     };
   }
 
-  /** Un pronostic est "bon" si le vainqueur (ou nul) deviné est le bon — le seul critère du compteur simple demandé (pas de points compliqués). */
+  /** Un pronostic est "bon" si le vainqueur (ou nul) deviné est le bon — utilisé pour l'indicateur par match, pas pour le classement "qui devine le mieux" (voir isPredictionExact). */
   function isPredictionCorrect(prediction, result) {
     if (!prediction || prediction.winner === null || prediction.winner === undefined || !result) return false;
     return prediction.winner === deriveOutcomeFromResult(result).winner;
+  }
+
+  /**
+   * Un pronostic est "exact" (donne un point au classement "qui devine le
+   * mieux") s'il est intégralement juste : vainqueur ET les deux bonus,
+   * case par case — pas seulement le total de points calculé. Comparer sur
+   * les points calculés serait exploitable : le plafond à un seul bonus
+   * (voir computePoints) fait que cocher les deux cases bonus "pour être
+   * sûr" donnerait parfois le même total qu'en cochant la bonne case seule,
+   * sans jamais risquer moins — la comparaison case par case retire cet
+   * avantage : une case bonus cochée à tort fait rater le point, même si le
+   * vainqueur était bon.
+   */
+  function isPredictionExact(prediction, result) {
+    if (!prediction || prediction.winner === null || prediction.winner === undefined || !result) return false;
+    const actual = deriveOutcomeFromResult(result);
+    return prediction.winner === actual.winner
+      && !!prediction.bonusHome === actual.bonusHome
+      && !!prediction.bonusAway === actual.bonusAway
+      && !!prediction.closeMargin === actual.closeMargin;
   }
 
   /**
@@ -104,5 +124,5 @@
       .sort((a, b) => b.points - a.points || b.diff - a.diff || a.team.name.localeCompare(b.team.name, 'fr'));
   }
 
-  window.D1P.services.scoringService = { computePoints, deriveOutcomeFromResult, isPredictionCorrect, computeStandingsTable };
+  window.D1P.services.scoringService = { computePoints, deriveOutcomeFromResult, isPredictionCorrect, isPredictionExact, computeStandingsTable };
 })();

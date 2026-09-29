@@ -149,10 +149,14 @@
         `Points prévus : ${teamLabel(match.homeTeamId)} ${predictedPoints.home} · ${teamLabel(match.awayTeamId)} ${predictedPoints.away}`,
       ]));
       if (graded) {
-        const correct = window.D1P.services.scoringService.isPredictionCorrect(prediction, match.result);
+        const exact = window.D1P.services.scoringService.isPredictionExact(prediction, match.result);
+        const winnerCorrect = window.D1P.services.scoringService.isPredictionCorrect(prediction, match.result);
         const actualOutcome = window.D1P.services.scoringService.deriveOutcomeFromResult(match.result);
         const actualPoints = window.D1P.services.scoringService.computePoints(actualOutcome);
-        rows.push(el('div', { className: 'badge ' + (correct ? 'badge-green' : 'badge-red'), style: { marginTop: '8px' } }, [correct ? '✅ Bon vainqueur deviné' : '❌ Mauvais vainqueur']));
+        // "Qui devine le mieux" ne compte que l'exact (vainqueur + bonus) — un vainqueur juste avec un bonus raté ne rapporte rien, d'où le badge intermédiaire plutôt qu'un simple bon/mauvais.
+        const badgeClass = exact ? 'badge-green' : winnerCorrect ? 'badge-yellow' : 'badge-red';
+        const badgeText = exact ? '✅ Pronostic exact (vainqueur + bonus)' : winnerCorrect ? '🟡 Bon vainqueur, mais bonus raté' : '❌ Mauvais vainqueur';
+        rows.push(el('div', { className: 'badge ' + badgeClass, style: { marginTop: '8px' } }, [badgeText]));
         rows.push(el('div', { className: 'muted small', style: { marginTop: '4px' } }, [
           `Points réels : ${teamLabel(match.homeTeamId)} ${actualPoints.home} · ${teamLabel(match.awayTeamId)} ${actualPoints.away}`,
         ]));
@@ -170,10 +174,10 @@
         rows.push(el('div', { className: 'muted small', style: { marginTop: '12px', marginBottom: '4px' } }, ['Pronostics du groupe']));
         list.forEach(({ m, p }) => {
           const label = p.winner === 'draw' ? 'Nul' : teamLabel(p.winner === 'home' ? match.homeTeamId : match.awayTeamId);
-          const correct = graded ? window.D1P.services.scoringService.isPredictionCorrect(p, match.result) : null;
+          const exact = graded ? window.D1P.services.scoringService.isPredictionExact(p, match.result) : null;
           rows.push(el('div', { className: 'boost-row' }, [
             el('div', { className: 'boost-label' }, [m.name]),
-            el('div', {}, [correct === null ? label : (correct ? '✅ ' : '❌ ') + label]),
+            el('div', {}, [exact === null ? label : (exact ? '✅ ' : '❌ ') + label]),
           ]));
         });
       }
@@ -227,10 +231,10 @@
     } else {
       const graded = matches.filter((m) => m.status === 'termine' && m.result);
       if (graded.length) {
-        const correctCount = graded.filter((m) => window.D1P.services.scoringService.isPredictionCorrect(
+        const exactCount = graded.filter((m) => window.D1P.services.scoringService.isPredictionExact(
           window.D1P.services.predictionService.getPrediction(m.id, manager.id), m.result
         )).length;
-        root.appendChild(el('div', { className: 'badge badge-green', style: { marginBottom: '12px' } }, [`${correctCount}/${graded.length} bons pronostics cette journée`]));
+        root.appendChild(el('div', { className: 'badge badge-green', style: { marginBottom: '12px' } }, [`${exactCount}/${graded.length} pronostics exacts cette journée`]));
       }
       matches.forEach((m) => root.appendChild(buildReadOnlyMatchCard(m, manager)));
     }

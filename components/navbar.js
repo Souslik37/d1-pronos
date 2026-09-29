@@ -10,6 +10,7 @@
     { key: 'season', icon: '🔮', label: 'Ma saison' },
     { key: 'matchday', icon: '🎯', label: 'Pronostics' },
     { key: 'standings', icon: '🏆', label: 'Classement' },
+    { key: 'rules', icon: '📖', label: 'Règles' },
     { key: 'admin', icon: '⚙️', label: 'Administration' },
   ];
 
