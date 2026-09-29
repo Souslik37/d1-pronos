@@ -21,6 +21,12 @@
       barrageRank: 8, // 8e : barrage contre le 1er de D2 (le 7e reste en D1 sans risque)
       relegatedFromRank: 9, // 9e ET 10e : descente directe en D2
       kickoffHour: 15, // tous les matchs commencent à 15h — un match se verrouille automatiquement à cette heure le jour J (voir seasonService.isMatchOpen), même si l'admin n'a pas cliqué "Verrouiller".
+      // Le verrouillage automatique ne s'applique qu'aux matchs à partir de
+      // cette date. J1 (13/09) et J2 (20/09) ont une date réelle déjà
+      // passée — elles se pronostiquent rétroactivement exprès (le vrai
+      // score sera encodé après coup) — donc elles restent exemptées : seul
+      // le statut manuel compte pour elles, comme avant l'ajout de cette règle.
+      autoLockFromDate: '2026-09-29',
     },
 
     // Système de points de classement standard (rugby à XV, bonus offensif/
