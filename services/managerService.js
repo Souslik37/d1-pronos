@@ -28,5 +28,18 @@
     return { ok: true };
   }
 
-  window.D1P.services.managerService = { getActiveManager, listManagers, setRole };
+  /** Admin uniquement (RLS managers_delete_admin) : retire un manager du jeu — ses pronostics disparaissent avec (cascade). */
+  async function removeManager(managerId) {
+    const state = window.D1P.services.stateService.getState();
+    if (!state.managers[managerId]) return { ok: false, reason: 'Manager introuvable.' };
+    const ok = await window.D1P.services.storageService.deleteManager(managerId);
+    if (!ok) return { ok: false, reason: 'Suppression impossible — vérifie ta connexion et réessaie.' };
+    delete state.managers[managerId];
+    Object.keys(state.predictions).forEach((matchId) => { delete state.predictions[matchId][managerId]; });
+    delete state.seasonPredictions[managerId];
+    window.D1P.services.stateService.notify();
+    return { ok: true };
+  }
+
+  window.D1P.services.managerService = { getActiveManager, listManagers, setRole, removeManager };
 })();

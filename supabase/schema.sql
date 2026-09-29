@@ -93,11 +93,19 @@ alter table season_settings enable row level security;
 
 -- Managers : tout le monde peut lire les noms (classement, admin) ; on ne
 -- modifie que sa propre ligne, sauf un admin qui peut aussi modifier celle
--- d'un autre (ex: accorder/retirer le rôle admin).
+-- d'un autre (ex: accorder/retirer le rôle admin). Suppression : admin
+-- seulement — retire aussi en cascade ses pronostics (voir les tables
+-- predictions/season_predictions, `on delete cascade`). Ça ne supprime PAS
+-- le compte Supabase Auth sous-jacent (pas de service_role côté client) :
+-- s'il tente de se reconnecter, script.js boot() détecte l'absence de
+-- profil manager et le renvoie proprement vers l'écran de connexion.
 create policy "managers_select_all" on managers for select using (true);
 create policy "managers_insert_own" on managers for insert with check (auth.uid() = id);
 create policy "managers_update_own_or_admin" on managers for update using (
   auth.uid() = id or exists (select 1 from managers where id = auth.uid() and role = 'admin')
+);
+create policy "managers_delete_admin" on managers for delete using (
+  exists (select 1 from managers where id = auth.uid() and role = 'admin')
 );
 
 -- Teams : lecture publique, écriture admin seulement.
@@ -174,7 +182,7 @@ create policy "season_settings_admin_write" on season_settings for update using 
 grant usage on schema public to anon, authenticated;
 
 grant select on public.managers to anon, authenticated;
-grant insert, update on public.managers to authenticated;
+grant insert, update, delete on public.managers to authenticated;
 
 grant select on public.teams to anon, authenticated;
 grant insert, update, delete on public.teams to authenticated;

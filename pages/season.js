@@ -90,9 +90,15 @@
   function buildBracket(order, bracket, onPick, readOnly) {
     const S = window.D1P.services.seasonPredictionService;
     const wrap = el('div', {});
-    function rerender() {
+    // `order`/`bracket` sont pris en paramètres à CHAQUE appel de rerender (pas
+    // capturés une fois pour toutes à la construction) — sinon, dès que
+    // l'appelant réaffecte sa variable `bracket` (sanitizeBracket renvoie un
+    // NOUVEL objet, il ne mute pas l'existant), ce rerender continuerait de
+    // lire l'ancienne référence figée et l'affichage resterait bloqué après
+    // le tout premier clic.
+    function rerender(currentOrder, currentBracket) {
       wrap.innerHTML = '';
-      const m = S.bracketMatchups(order, bracket);
+      const m = S.bracketMatchups(currentOrder, currentBracket);
       const rows = [
         ['qf1', 'Quart 1 (3e vs 6e)'], ['qf2', 'Quart 2 (4e vs 5e)'],
         ['sf1', 'Demi 1 (1er vs vainqueur Q2)'], ['sf2', 'Demi 2 (2e vs vainqueur Q1)'],
@@ -107,7 +113,7 @@
           el('div', { className: 'muted small', style: { marginBottom: '8px', fontWeight: '750', textTransform: 'uppercase', fontSize: '10px' } }, [label]),
           el('div', { className: 'single-picker' }, ['home', 'away'].map((side) => {
             const teamId = matchup[side];
-            const isWinner = teamId && bracket[winnerKey] === teamId;
+            const isWinner = teamId && currentBracket[winnerKey] === teamId;
             return el('div', {
               className: 'pick-item' + (isWinner ? ' active' : ''),
               style: { opacity: teamId ? '1' : '.5', cursor: readOnly || !ready ? 'default' : 'pointer' },
@@ -119,7 +125,7 @@
       });
       wrap.appendChild(grid);
     }
-    rerender();
+    rerender(order, bracket);
     wrap.__rerender = rerender;
     return wrap;
   }
@@ -143,7 +149,7 @@
     root.appendChild(el('div', { className: 'section-title' }, ['Classement final pronostiqué']));
     const reorderList = buildReorderList(order, () => {
       bracket = S.sanitizeBracket(order, bracket);
-      bracketEl.__rerender();
+      bracketEl.__rerender(order, bracket);
     });
     root.appendChild(reorderList);
 
@@ -151,7 +157,7 @@
     const bracketEl = buildBracket(order, bracket, (key, teamId) => {
       bracket[key] = bracket[key] === teamId ? null : teamId;
       bracket = S.sanitizeBracket(order, bracket);
-      bracketEl.__rerender();
+      bracketEl.__rerender(order, bracket);
     }, false);
     root.appendChild(bracketEl);
 

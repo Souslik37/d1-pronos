@@ -11,6 +11,7 @@
   window.D1P.pages = window.D1P.pages || {};
 
   const { el } = window.D1P.utils.dom;
+  let selectedMatchday = null; // journée affichée dans Calendrier ; null = pas encore choisie
 
   function teamLabel(teamId) {
     const team = window.D1P.services.seasonService.getTeam(teamId);
@@ -240,33 +241,67 @@
       el('span', { className: 'see-all', onClick: () => openAddMatchModal(rerender) }, ['+ Ajouter un match']),
     ]));
 
-    matchdays.forEach((matchday) => {
-      const dayMatches = matches.filter((m) => m.matchday === matchday);
-      const allOpen = dayMatches.every((m) => m.status === 'ouvert');
-      const allLocked = dayMatches.every((m) => m.status !== 'ouvert');
-      root.appendChild(el('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '14px 0 6px' } }, [
-        el('div', { style: { fontWeight: '750' } }, ['Journée ' + matchday]),
-        el('div', { style: { display: 'flex', gap: '6px' } }, [
-          el('button', {
-            className: 'btn btn-sm' + (allOpen ? ' btn-primary' : ' btn-ghost'),
-            onClick: async () => { await window.D1P.services.seasonService.setMatchdayStatus(matchday, 'ouvert'); rerender(); },
-          }, ['🟢 Ouvrir la journée']),
-          el('button', {
-            className: 'btn btn-sm' + (allLocked ? ' btn-primary' : ' btn-ghost'),
-            onClick: async () => { await window.D1P.services.seasonService.setMatchdayStatus(matchday, 'verrouille'); rerender(); },
-          }, ['🔒 Verrouiller la journée']),
-        ]),
-      ]));
-      dayMatches.forEach((m) => root.appendChild(buildMatchRow(m, rerender)));
-    });
+    if (!matchdays.length) {
+      root.appendChild(el('div', { className: 'empty-state' }, [el('div', { className: 'ic' }, ['📅']), el('div', {}, ['Aucun match pour le moment.'])]));
+      return;
+    }
+    if (selectedMatchday === null || !matchdays.includes(selectedMatchday)) selectedMatchday = matchdays[0];
+
+    const select = el('select', {
+      onChange: (e) => { selectedMatchday = Number(e.target.value); rerender(); },
+    }, matchdays.map((md) => el('option', { value: md, selected: md === selectedMatchday }, ['Journée ' + md])));
+    root.appendChild(el('div', { className: 'card', style: { marginBottom: '10px' } }, [select]));
+
+    const dayMatches = matches.filter((m) => m.matchday === selectedMatchday);
+    const allOpen = dayMatches.every((m) => m.status === 'ouvert');
+    const allLocked = dayMatches.every((m) => m.status !== 'ouvert');
+    root.appendChild(el('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 0 6px' } }, [
+      el('div', { style: { fontWeight: '750' } }, ['Journée ' + selectedMatchday]),
+      el('div', { style: { display: 'flex', gap: '6px' } }, [
+        el('button', {
+          className: 'btn btn-sm' + (allOpen ? ' btn-primary' : ' btn-ghost'),
+          onClick: async () => { await window.D1P.services.seasonService.setMatchdayStatus(selectedMatchday, 'ouvert'); rerender(); },
+        }, ['🟢 Ouvrir la journée']),
+        el('button', {
+          className: 'btn btn-sm' + (allLocked ? ' btn-primary' : ' btn-ghost'),
+          onClick: async () => { await window.D1P.services.seasonService.setMatchdayStatus(selectedMatchday, 'verrouille'); rerender(); },
+        }, ['🔒 Verrouiller la journée']),
+      ]),
+    ]));
+    dayMatches.forEach((m) => root.appendChild(buildMatchRow(m, rerender)));
   }
 
   // ── Managers ──────────────────────────────────────────────────────────
+  function confirmRemoveManager(manager, rerender) {
+    window.D1P.components.modal.open({
+      title: 'Supprimer ' + manager.name + ' ?',
+      body: el('div', {}, [el('p', { className: 'small' }, [
+        'Retire ' + manager.name + ' du jeu — ses pronostics (journées et saison) disparaissent définitivement avec. Cette action est irréversible.',
+      ])]),
+      actions: [
+        { label: 'Annuler', className: 'btn-ghost' },
+        {
+          label: 'Supprimer', className: 'btn-primary', closeOnClick: false,
+          onClick: async (btn) => {
+            btn.disabled = true; btn.textContent = 'Suppression...';
+            const res = await window.D1P.services.managerService.removeManager(manager.id);
+            if (!res.ok) { window.D1P.components.toast.show(res.reason, 'error'); btn.disabled = false; btn.textContent = 'Supprimer'; return; }
+            window.D1P.components.toast.show(manager.name + ' a été retiré du jeu ✅', 'success');
+            window.D1P.components.modal.close();
+            rerender();
+          },
+        },
+      ],
+    });
+  }
+
   function buildManagersSection(root, rerender) {
     root.appendChild(el('div', { className: 'section-title' }, ['👥 Managers']));
+    const activeManager = window.D1P.services.managerService.getActiveManager();
     const managers = window.D1P.services.managerService.listManagers();
     const list = el('div', { className: 'card' });
     managers.forEach((m) => {
+      const isSelf = m.id === activeManager.id;
       list.appendChild(el('div', { className: 'boost-row' }, [
         el('div', { className: 'boost-label' }, [m.name]),
         el('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } }, [
@@ -279,6 +314,10 @@
               rerender();
             },
           }, [m.role === 'admin' ? 'Retirer admin' : 'Rendre admin']),
+          isSelf ? null : el('button', {
+            className: 'btn btn-sm btn-ghost',
+            onClick: () => confirmRemoveManager(m, rerender),
+          }, ['Supprimer']),
         ]),
       ]));
     });

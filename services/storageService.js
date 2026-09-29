@@ -102,6 +102,13 @@
     return !error;
   }
 
+  /** Supprime le profil manager (cascade : ses pronostics disparaissent avec). Ne supprime pas le compte Auth sous-jacent — voir schema.sql. */
+  async function deleteManager(managerId) {
+    const { error } = await client().from('managers').delete().eq('id', managerId);
+    if (error) console.error('[storageService] échec suppression manager', error);
+    return !error;
+  }
+
   async function insertTeam(team) {
     const { error } = await client().from('teams').insert({ id: team.id, name: team.name, logo_url: team.logoUrl || null });
     if (error) console.error('[storageService] échec ajout équipe', error);
@@ -185,7 +192,7 @@
   }
 
   window.D1P.services.storageService = {
-    loadInitialState, saveManagerRole,
+    loadInitialState, saveManagerRole, deleteManager,
     insertTeam, updateTeam,
     insertMatch, updateMatch, deleteMatch, setMatchdayStatus,
     savePredictionRow, loadPredictionsForMatch,

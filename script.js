@@ -109,13 +109,14 @@
     try {
       const state = await window.D1P.services.stateService.init(session.user.id);
       if (!state.managers[session.user.id]) {
-        throw new Error('Profil manager introuvable pour cette session.');
+        throw new Error('PROFILE_NOT_FOUND');
       }
     } catch (e) {
       console.error('[script] chargement des données impossible', e);
-      window.D1P.components.toast && window.D1P.components.toast.show(
-        'Connexion au serveur impossible — vérifie ta connexion internet et réessaie.', 'error'
-      );
+      const message = e.message === 'PROFILE_NOT_FOUND'
+        ? 'Ce profil a été supprimé — contacte l\'admin si c\'est une erreur.'
+        : 'Connexion au serveur impossible — vérifie ta connexion internet et réessaie.';
+      window.D1P.components.toast && window.D1P.components.toast.show(message, 'error');
       await window.D1P.services.authService.signOut();
       showOnboarding();
       return;
