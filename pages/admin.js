@@ -462,11 +462,14 @@
       el('p', {}, ['Équipes, calendrier, résultats officiels, managers et saison.']),
     ]));
 
+    // Ordre par fréquence d'usage réelle : le calendrier (ouvrir/verrouiller
+    // les journées) se touche chaque semaine, managers/saison occasionnellement,
+    // équipes/logos quasi jamais une fois la saison lancée — donc tout en bas.
     function rerender() { render(root); }
-    buildTeamsSection(root, rerender);
     buildCalendarSection(root, rerender);
     buildManagersSection(root, rerender);
     buildSeasonSection(root, rerender);
+    buildTeamsSection(root, rerender);
   }
 
   window.D1P.pages.admin = { render };
