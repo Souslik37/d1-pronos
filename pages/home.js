@@ -30,7 +30,7 @@
     ]));
 
     const grid = el('div', { className: 'dash-grid' }, [
-      quickCard('🎯', 'Journée ' + matchday, openCount ? openCount + ' match' + (openCount > 1 ? 's' : '') + ' à pronostiquer' : 'Pronostics fermés — voir les résultats', () => { window.location.hash = '#matchday'; }),
+      quickCard('🎯', 'Journée ' + matchday, openCount ? openCount + ' match' + (openCount > 1 ? 's' : '') + ' à pronostiquer' : 'Pronostics fermés — voir les résultats', () => { window.D1P.pages.matchday.goTo(matchday); window.location.hash = '#matchday'; }),
       quickCard('🔮', 'Ma saison', seasonLocked ? (seasonPrediction ? 'Pronostic verrouillé — voir le détail' : 'Saison commencée, trop tard') : (seasonPrediction ? 'Modifier mon pronostic' : 'Pas encore fait — à faire avant le coup d\'envoi !'), () => { window.location.hash = '#season'; }),
       quickCard('🏆', 'Classement', 'Le vrai classement du championnat, et qui devine le mieux', () => { window.location.hash = '#standings'; }),
     ]);

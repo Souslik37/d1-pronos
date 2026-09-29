@@ -8,6 +8,11 @@
   const { el } = window.D1P.utils.dom;
   let currentMatchday = null; // numéro affiché ; null = pas encore initialisé
 
+  /** Permet à une autre page (ex: Accueil) de forcer la journée affichée avant de naviguer ici — sinon currentMatchday reste sur la dernière journée parcourue. */
+  function goTo(matchday) {
+    currentMatchday = matchday;
+  }
+
   function teamLabel(teamId) {
     const team = window.D1P.services.seasonService.getTeam(teamId);
     return team ? team.name : '—';
@@ -83,18 +88,36 @@
       ]));
       const closeMarginRow = closeMarginRowFor();
       if (closeMarginRow) card.appendChild(closeMarginRow);
-      card.appendChild(el('div', { className: 'field-hint', style: { marginTop: '8px' } }, [
-        '⚠️ Une équipe ne cumule jamais bonus offensif et bonus défensif sur un même match (règle belge) — max +1 point de bonus, même si les deux sont cochés.',
-      ]));
       card.appendChild(preview);
       refreshPreview();
     }
+    /**
+     * Le bonus défensif n'existe que s'il y a un perdant (jamais sur un
+     * match nul, voir formState.winner === 'draw' plus haut) — c'est
+     * justement le seul cas où le cumul avec le bonus offensif est possible,
+     * donc le petit ⓘ qui explique la règle vit ici : il disparaît de
+     * lui-même sur un nul, pas besoin de condition séparée.
+     */
     function closeMarginRowFor() {
       if (!formState.winner || formState.winner === 'draw') return null;
-      return el('label', { className: 'field-hint', style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '8px' } }, [
-        el('input', { type: 'checkbox', checked: formState.closeMargin, onChange: (e) => { formState.closeMargin = e.target.checked; refreshPreview(); } }),
-        'Écart serré (7 points ou moins) — bonus défensif pour ' + teamLabel(formState.winner === 'home' ? match.awayTeamId : match.homeTeamId),
+      const row = el('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px' } }, [
+        el('label', { className: 'field-hint', style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 } }, [
+          el('input', { type: 'checkbox', checked: formState.closeMargin, onChange: (e) => { formState.closeMargin = e.target.checked; refreshPreview(); } }),
+          'Écart serré (7 points ou moins) — bonus défensif pour ' + teamLabel(formState.winner === 'home' ? match.awayTeamId : match.homeTeamId),
+        ]),
+        el('span', {
+          className: 'muted', title: 'Une équipe ne cumule jamais bonus offensif et bonus défensif sur un même match (règle belge) — max +1 point de bonus, même si les deux sont cochés.',
+          style: { cursor: 'pointer', fontSize: '13px', flexShrink: '0' },
+          onClick: () => { formState.showBonusInfo = !formState.showBonusInfo; rerenderCard(); },
+        }, ['ⓘ']),
       ]);
+      const wrap = el('div', {}, [row]);
+      if (formState.showBonusInfo) {
+        wrap.appendChild(el('div', { className: 'field-hint', style: { marginTop: '4px' } }, [
+          '⚠️ Une équipe ne cumule jamais bonus offensif et bonus défensif sur un même match (règle belge) — max +1 point de bonus, même si les deux sont cochés.',
+        ]));
+      }
+      return wrap;
     }
     rerenderCard();
     return card;
@@ -213,5 +236,5 @@
     }
   }
 
-  window.D1P.pages.matchday = { render };
+  window.D1P.pages.matchday = { render, goTo };
 })();
