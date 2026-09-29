@@ -133,7 +133,7 @@
     rows.push(el('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' } }, [
       el('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '750' } }, [teamBadge(match.homeTeamId), teamLabel(match.homeTeamId), el('span', { className: 'muted' }, ['vs']), teamLabel(match.awayTeamId), teamBadge(match.awayTeamId)]),
       graded
-        ? el('div', { style: { fontWeight: '800' } }, [match.result.scoreHome + ' – ' + match.result.scoreAway])
+        ? el('div', { style: { fontWeight: '800' } }, [match.result.winner === 'draw' ? 'Match nul' : 'Victoire ' + teamLabel(match.result.winner === 'home' ? match.homeTeamId : match.awayTeamId)])
         : el('div', { className: 'muted small' }, [window.D1P.utils.format.formatDateFr(match.date, { short: true }), match.status === 'ouvert' ? '' : ' · 🔒']),
     ]));
 
@@ -151,8 +151,7 @@
       if (graded) {
         const exact = window.D1P.services.scoringService.isPredictionExact(prediction, match.result);
         const winnerCorrect = window.D1P.services.scoringService.isPredictionCorrect(prediction, match.result);
-        const actualOutcome = window.D1P.services.scoringService.deriveOutcomeFromResult(match.result);
-        const actualPoints = window.D1P.services.scoringService.computePoints(actualOutcome);
+        const actualPoints = window.D1P.services.scoringService.computePoints(match.result);
         // "Qui devine le mieux" ne compte que l'exact (vainqueur + bonus) — un vainqueur juste avec un bonus raté ne rapporte rien, d'où le badge intermédiaire plutôt qu'un simple bon/mauvais.
         const badgeClass = exact ? 'badge-green' : winnerCorrect ? 'badge-yellow' : 'badge-red';
         const badgeText = exact ? '✅ Pronostic exact (vainqueur + bonus)' : winnerCorrect ? '🟡 Bon vainqueur, mais bonus raté' : '❌ Mauvais vainqueur';

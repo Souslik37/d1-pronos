@@ -33,7 +33,7 @@
 
     if (!table.length) return el('div', { className: 'empty-state' }, [el('div', { className: 'ic' }, ['🏆']), el('div', {}, ['Aucune équipe pour le moment.'])]);
 
-    const headers = ['#', 'Équipe', 'Pts', 'J', 'G', 'N', 'P', 'Pour', 'Contre', 'Diff'];
+    const headers = ['#', 'Équipe', 'Pts', 'J', 'G', 'N', 'P'];
     return el('table', { className: 'standings-table' }, [
       el('thead', {}, [el('tr', {}, headers.map((h) => el('th', {}, [h])))]),
       el('tbody', {}, table.map((r, i) => el('tr', {}, [
@@ -44,9 +44,6 @@
         el('td', {}, [String(r.won)]),
         el('td', {}, [String(r.drawn)]),
         el('td', {}, [String(r.lost)]),
-        el('td', { className: 'muted' }, [String(r.pointsFor)]),
-        el('td', { className: 'muted' }, [String(r.pointsAgainst)]),
-        el('td', { className: 'muted' }, [window.D1P.utils.format.formatSigned(r.diff)]),
       ]))),
     ]);
   }

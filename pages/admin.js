@@ -124,38 +124,82 @@
     });
   }
 
+  /**
+   * Même forme que le formulaire de pronostic (voir pages/matchday.js
+   * buildOpenMatchCard) — l'admin choisit qui a gagné et les bonus, pas un
+   * score brut : ni lui ni les managers ne suivent le score exact match par
+   * match, seulement qui gagne et les bonus (voir scoringService.js).
+   */
   function openResultModal(match, rerender) {
     const existing = match.result || {};
-    const scoreHome = el('input', { type: 'number', min: '0', value: existing.scoreHome });
-    const scoreAway = el('input', { type: 'number', min: '0', value: existing.scoreAway });
-    const triesHome = el('input', { type: 'number', min: '0', value: existing.triesHome });
-    const triesAway = el('input', { type: 'number', min: '0', value: existing.triesAway });
+    const state = {
+      winner: existing.winner || null,
+      bonusHome: !!existing.bonusHome,
+      bonusAway: !!existing.bonusAway,
+      closeMargin: !!existing.closeMargin,
+      showBonusInfo: false,
+    };
+
+    const body = el('div', {});
+    function winnerOption(value, label) {
+      return el('div', {
+        className: 'pick-item' + (state.winner === value ? ' active' : ''),
+        onClick: () => { state.winner = value; if (value === 'draw') state.closeMargin = false; rerenderBody(); },
+      }, [label]);
+    }
+    function closeMarginBlockFor() {
+      if (!state.winner || state.winner === 'draw') return null;
+      const row = el('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px' } }, [
+        el('label', { className: 'field-hint', style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 } }, [
+          el('input', { type: 'checkbox', checked: state.closeMargin, onChange: (e) => { state.closeMargin = e.target.checked; } }),
+          'Écart serré (7 points ou moins) — bonus défensif pour ' + teamLabel(state.winner === 'home' ? match.awayTeamId : match.homeTeamId),
+        ]),
+        el('span', {
+          className: 'muted', title: 'Une équipe ne cumule jamais bonus offensif et bonus défensif sur un même match (règle belge) — max +1 point de bonus, même si les deux sont cochés.',
+          style: { cursor: 'pointer', fontSize: '13px', flexShrink: '0' },
+          onClick: () => { state.showBonusInfo = !state.showBonusInfo; rerenderBody(); },
+        }, ['ⓘ']),
+      ]);
+      const wrap = el('div', {}, [row]);
+      if (state.showBonusInfo) {
+        wrap.appendChild(el('div', { className: 'field-hint', style: { marginTop: '4px' } }, [
+          '⚠️ Une équipe ne cumule jamais bonus offensif et bonus défensif sur un même match (règle belge) — max +1 point de bonus, même si les deux sont cochés.',
+        ]));
+      }
+      return wrap;
+    }
+    function rerenderBody() {
+      body.innerHTML = '';
+      body.appendChild(el('div', { className: 'single-picker' }, [
+        winnerOption('home', teamLabel(match.homeTeamId)),
+        winnerOption('draw', 'Match nul'),
+        winnerOption('away', teamLabel(match.awayTeamId)),
+      ]));
+      body.appendChild(el('div', { style: { display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '10px' } }, [
+        el('label', { style: { display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px' } }, [
+          el('input', { type: 'checkbox', checked: state.bonusHome, onChange: (e) => { state.bonusHome = e.target.checked; } }),
+          teamLabel(match.homeTeamId) + ' marque 4 essais ou plus',
+        ]),
+        el('label', { style: { display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px' } }, [
+          el('input', { type: 'checkbox', checked: state.bonusAway, onChange: (e) => { state.bonusAway = e.target.checked; } }),
+          teamLabel(match.awayTeamId) + ' marque 4 essais ou plus',
+        ]),
+      ]));
+      const closeMarginBlock = closeMarginBlockFor();
+      if (closeMarginBlock) body.appendChild(closeMarginBlock);
+    }
+    rerenderBody();
 
     window.D1P.components.modal.open({
       title: 'Résultat · ' + teamLabel(match.homeTeamId) + ' vs ' + teamLabel(match.awayTeamId),
-      body: el('div', {}, [
-        el('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' } }, [
-          el('div', { className: 'field' }, [el('label', {}, ['Score ' + teamLabel(match.homeTeamId)]), scoreHome]),
-          el('div', { className: 'field' }, [el('label', {}, ['Score ' + teamLabel(match.awayTeamId)]), scoreAway]),
-          el('div', { className: 'field' }, [el('label', {}, ['Essais ' + teamLabel(match.homeTeamId)]), triesHome]),
-          el('div', { className: 'field' }, [el('label', {}, ['Essais ' + teamLabel(match.awayTeamId)]), triesAway]),
-        ]),
-        el('div', { className: 'field-hint' }, ['Les essais servent à calculer le bonus offensif (4 ou plus) — nécessaires pour un vrai classement.']),
-        el('div', { className: 'field-hint' }, ['⚠️ Une équipe ne cumule jamais bonus offensif et bonus défensif sur un même match (règle belge) — max +1 point de bonus au total.']),
-      ]),
+      body,
       actions: [
         { label: 'Annuler', className: 'btn-ghost' },
         {
           label: 'Valider le résultat', className: 'btn-primary', closeOnClick: false,
           onClick: async (btn) => {
-            const result = {
-              scoreHome: Number(scoreHome.value), scoreAway: Number(scoreAway.value),
-              triesHome: Number(triesHome.value), triesAway: Number(triesAway.value),
-            };
-            if ([result.scoreHome, result.scoreAway, result.triesHome, result.triesAway].some((n) => Number.isNaN(n) || scoreHome.value === '' || scoreAway.value === '' || triesHome.value === '' || triesAway.value === '')) {
-              window.D1P.components.toast.show('Renseigne les 4 champs (score et essais des deux équipes).', 'error');
-              return;
-            }
+            if (!state.winner) { window.D1P.components.toast.show('Choisis qui a gagné (ou un match nul).', 'error'); return; }
+            const result = { winner: state.winner, bonusHome: state.bonusHome, bonusAway: state.bonusAway, closeMargin: state.winner !== 'draw' && state.closeMargin };
             btn.disabled = true; btn.textContent = 'Enregistrement...';
             const res = await window.D1P.services.seasonService.finalizeMatch(match.id, result);
             if (!res.ok) { window.D1P.components.toast.show(res.reason, 'error'); btn.disabled = false; btn.textContent = 'Valider le résultat'; return; }
