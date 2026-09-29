@@ -52,6 +52,7 @@
       const j = i + dir;
       if (j < 0 || j >= order.length) return;
       [order[i], order[j]] = [order[j], order[i]];
+      rerender();
       onChange();
     }
     function rerender() {
