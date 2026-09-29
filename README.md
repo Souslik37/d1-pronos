@@ -64,8 +64,8 @@ ajoute les 18 journées × 5 matchs avec les vraies dates.
 
 10 équipes, aller-retour (18 journées). Les 6 premiers accèdent aux
 playoffs (1er-2e exemptés, direct en demi ; 3e-6e en quarts) → quarts →
-demies → finale. Les 4 derniers jouent les play-downs : le 10e descend
-directement en D2, le 9e joue un barrage contre le finaliste de D2.
+demies → finale. Les 4 derniers jouent les play-downs : les 9e et 10e
+descendent directement en D2, le 8e joue un barrage contre le 1er de D2.
 
 ## Pour la suite (pas fait dans cette première version)
 

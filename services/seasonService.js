@@ -66,6 +66,18 @@
     return { ok: true };
   }
 
+  /** logoUrl : chemin relatif (ex: assets/logos/asub.png) ou URL complète — chaîne vide pour retirer le logo. */
+  async function setTeamLogo(id, logoUrl) {
+    logoUrl = (logoUrl || '').trim();
+    const team = getTeam(id);
+    if (!team) return { ok: false, reason: 'Équipe introuvable.' };
+    const ok = await window.D1P.services.storageService.updateTeam({ ...team, logoUrl: logoUrl || null });
+    if (!ok) return { ok: false, reason: 'Écriture impossible — vérifie ta connexion et réessaie.' };
+    team.logoUrl = logoUrl || null;
+    window.D1P.services.stateService.notify();
+    return { ok: true };
+  }
+
   // ── Calendrier (admin) ───────────────────────────────────────────────────
   async function addMatch({ matchday, homeTeamId, awayTeamId, date }) {
     matchday = Number(matchday);
@@ -90,8 +102,8 @@
     if (!match) return { ok: false, reason: 'Match introuvable.' };
     const next = {
       ...match,
-      homeTeamId: homeTeamId !== undefined ? homeTeamId : match.homeTeamId,
-      awayTeamId: awayTeamId !== undefined ? awayTeamId : match.awayTeamId,
+      homeTeamId: homeTeamId !== undefined ? (homeTeamId || null) : match.homeTeamId,
+      awayTeamId: awayTeamId !== undefined ? (awayTeamId || null) : match.awayTeamId,
       date: date !== undefined ? date : match.date,
     };
     const ok = await window.D1P.services.storageService.updateMatch(next);
@@ -155,7 +167,7 @@
 
   window.D1P.services.seasonService = {
     listTeams, getTeam, listMatches, getMatch, matchesForMatchday, currentMatchday,
-    addTeam, renameTeam, addMatch, updateMatchInfo, removeMatch, setMatchdayStatus,
+    addTeam, renameTeam, setTeamLogo, addMatch, updateMatchInfo, removeMatch, setMatchdayStatus,
     finalizeMatch, unfinalizeMatch,
   };
 })();

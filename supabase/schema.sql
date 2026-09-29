@@ -23,11 +23,16 @@ create table teams (
 -- result : { scoreHome, scoreAway, triesHome, triesAway } — null tant que
 -- le match n'est pas joué. Tout le reste (vainqueur, bonus, points de
 -- classement) est recalculé à la volée depuis ces 4 nombres, jamais stocké.
+-- home_team_id/away_team_id : nullable — un match de playoff peut être
+-- réservé (journée + date) avant que les deux qualifiés soient connus (voir
+-- pages/admin.js buildMatchRow, qui affiche "À déterminer" et laisse les
+-- compléter plus tard ; scoringService.computeStandingsTable ignore déjà
+-- tout match sans résultat, donc rien d'autre à adapter).
 create table matches (
   id text primary key,
   matchday int not null,
-  home_team_id text not null references teams(id),
-  away_team_id text not null references teams(id),
+  home_team_id text references teams(id),
+  away_team_id text references teams(id),
   date date,
   status text not null default 'verrouille' check (status in ('ouvert', 'verrouille', 'termine')),
   result jsonb
@@ -48,23 +53,30 @@ create table predictions (
 );
 
 -- ── Pronostic de saison (un seul par manager, avant le coup d'envoi) ─────
+-- predicted_bracket : { qf1Winner, qf2Winner, sf1Winner, sf2Winner,
+-- finalWinner } (id d'équipe ou null) — le champion est finalWinner, pas un
+-- champ à part (voir seasonPredictionService.bracketMatchups). locked :
+-- verrouillé par le manager lui-même en validant définitivement (pas
+-- seulement par le verrou global season_settings.predictions_locked) —
+-- seul un admin peut le repasser à false (voir la policy update plus bas).
 create table season_predictions (
   manager_id uuid primary key references managers(id) on delete cascade,
   predicted_order jsonb not null, -- [team_id, ...] du 1er au 10e
-  predicted_champion text references teams(id),
+  predicted_bracket jsonb,
+  locked boolean not null default false,
   submitted_at timestamptz not null default now()
 );
 
 -- ── Réglages de saison : verrou global + classement final réel ──────────
 -- Une seule ligne (id=1) : predictions_locked ferme les pronostics de
--- saison une fois la journée 1 lancée ; actual_order/actual_champion sont
+-- saison une fois la journée 1 lancée ; actual_order/actual_bracket sont
 -- renseignés par l'admin en toute fin de saison pour comparer aux
 -- pronostics de chacun (voir seasonPredictionService.scoreSeasonPrediction).
 create table season_settings (
   id int primary key default 1,
   predictions_locked boolean not null default false,
   actual_order jsonb,
-  actual_champion text references teams(id),
+  actual_bracket jsonb,
   check (id = 1)
 );
 insert into season_settings (id, predictions_locked) values (1, false);
@@ -132,9 +144,18 @@ create policy "season_predictions_select_locked" on season_predictions for selec
 create policy "season_predictions_insert_own_or_admin" on season_predictions for insert with check (
   auth.uid() = manager_id or exists (select 1 from managers where id = auth.uid() and role = 'admin')
 );
-create policy "season_predictions_update_own_or_admin" on season_predictions for update using (
-  auth.uid() = manager_id or exists (select 1 from managers where id = auth.uid() and role = 'admin')
-);
+-- Un manager ne peut modifier SA ligne que si elle n'est pas verrouillée
+-- (par lui-même en validant définitivement, voir la colonne `locked`) ;
+-- un admin peut toujours modifier n'importe laquelle, y compris pour la
+-- déverrouiller (WITH CHECK ne revérifie pas `locked` sur la ligne écrite,
+-- sinon un manager ne pourrait jamais passer SA propre ligne à locked=true).
+create policy "season_predictions_update_own_unlocked_or_admin" on season_predictions for update
+  using (
+    (auth.uid() = manager_id and locked = false) or exists (select 1 from managers where id = auth.uid() and role = 'admin')
+  )
+  with check (
+    auth.uid() = manager_id or exists (select 1 from managers where id = auth.uid() and role = 'admin')
+  );
 
 -- Season settings : lecture publique (tout le monde doit savoir si c'est
 -- verrouillé), écriture admin seulement.

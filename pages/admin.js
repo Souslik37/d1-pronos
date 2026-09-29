@@ -17,6 +17,22 @@
     return team ? team.name : '—';
   }
 
+  function teamChip(teamId) {
+    const team = teamId ? window.D1P.services.seasonService.getTeam(teamId) : null;
+    const wrap = el('span', {});
+    wrap.innerHTML = window.D1P.utils.avatar.renderAvatar(team ? team.name : '?', team && team.logoUrl, 20, { square: true });
+    return wrap;
+  }
+
+  /** Même code couleur que pages/season.js "Ma saison" — sert de repère visuel pendant la saisie du classement final réel. */
+  function rankBg(rank) {
+    const S = window.D1P.data.CONFIG.season;
+    if (rank <= S.playoffSpots) return 'var(--green-bg)';
+    if (rank === S.barrageRank) return 'rgba(94, 158, 214, 0.15)';
+    if (rank >= S.relegatedFromRank) return 'rgba(214, 94, 94, 0.13)';
+    return null;
+  }
+
   // ── Équipes ───────────────────────────────────────────────────────────
   function buildTeamsSection(root, rerender) {
     root.appendChild(el('div', { className: 'section-title' }, ['🏉 Équipes']));
@@ -34,9 +50,16 @@
     }, ['Ajouter']);
     root.appendChild(el('div', { className: 'card', style: { display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '8px', marginBottom: '10px' } }, [idInput, nameInput, addBtn]));
 
+    root.appendChild(el('p', { className: 'field-hint', style: { marginBottom: '10px' } }, [
+      'Logo : chemin du fichier dans le projet (ex: assets/logos/dendermonde.png) ou une URL complète. Les fichiers vivent dans le dossier assets/logos/ du repo.',
+    ]));
+
     const teams = window.D1P.services.seasonService.listTeams();
     const list = el('div', { className: 'card' });
     teams.forEach((t) => {
+      const logoPreview = el('span', {});
+      logoPreview.innerHTML = window.D1P.utils.avatar.renderAvatar(t.name, t.logoUrl, 36, { square: true });
+
       const nameField = el('input', {
         type: 'text', value: t.name,
         onChange: async (e) => {
@@ -44,9 +67,22 @@
           if (!res.ok) { window.D1P.components.toast.show(res.reason, 'error'); e.target.value = t.name; }
         },
       });
-      list.appendChild(el('div', { className: 'boost-row' }, [
+      const logoField = el('input', {
+        type: 'text', value: t.logoUrl || '', placeholder: 'assets/logos/' + t.id + '.png',
+        onChange: async (e) => {
+          const res = await window.D1P.services.seasonService.setTeamLogo(t.id, e.target.value);
+          if (!res.ok) { window.D1P.components.toast.show(res.reason, 'error'); e.target.value = t.logoUrl || ''; return; }
+          logoPreview.innerHTML = window.D1P.utils.avatar.renderAvatar(t.name, t.logoUrl, 36, { square: true });
+        },
+      });
+      list.appendChild(el('div', {
+        className: 'boost-row',
+        style: { display: 'grid', gridTemplateColumns: 'auto auto 1fr 1.4fr', gap: '10px', alignItems: 'center' },
+      }, [
+        logoPreview,
         el('div', { className: 'muted small' }, [t.id]),
         nameField,
+        logoField,
       ]));
     });
     root.appendChild(list);
@@ -172,11 +208,12 @@
 
   function buildMatchRow(match, rerender) {
     const teams = window.D1P.services.seasonService.listTeams();
-    const homeSelect = el('select', {}, teams.map((t) => el('option', { value: t.id }, [t.name])));
-    homeSelect.value = match.homeTeamId;
+    const tbdOption = () => el('option', { value: '' }, ['— À déterminer —']);
+    const homeSelect = el('select', {}, [tbdOption(), ...teams.map((t) => el('option', { value: t.id }, [t.name]))]);
+    homeSelect.value = match.homeTeamId || '';
     homeSelect.addEventListener('change', (e) => window.D1P.services.seasonService.updateMatchInfo(match.id, { homeTeamId: e.target.value }));
-    const awaySelect = el('select', {}, teams.map((t) => el('option', { value: t.id }, [t.name])));
-    awaySelect.value = match.awayTeamId;
+    const awaySelect = el('select', {}, [tbdOption(), ...teams.map((t) => el('option', { value: t.id }, [t.name]))]);
+    awaySelect.value = match.awayTeamId || '';
     awaySelect.addEventListener('change', (e) => window.D1P.services.seasonService.updateMatchInfo(match.id, { awayTeamId: e.target.value }));
     const dateInput = el('input', { type: 'date', value: match.date, onChange: (e) => window.D1P.services.seasonService.updateMatchInfo(match.id, { date: e.target.value }) });
 
@@ -267,28 +304,28 @@
       }, [locked ? '🔓 Rouvrir les pronostics de saison' : '🔒 Verrouiller les pronostics de saison']),
     ]));
 
-    // Classement final réel — à remplir seulement en toute fin de saison, pour comparer aux pronostics de chacun.
+    // Classement final réel + tableau des playoffs réel — à remplir seulement en toute fin de saison, pour comparer aux pronostics de chacun.
+    const S = window.D1P.services.seasonPredictionService;
     const teams = window.D1P.services.seasonService.listTeams();
     const state = window.D1P.services.stateService.getState();
     const order = (state.seasonActualOrder && state.seasonActualOrder.length === teams.length ? state.seasonActualOrder : teams.map((t) => t.id)).slice();
-    let champion = state.seasonActualChampion || order[0];
-
-    const championSelect = el('select', {}, teams.map((t) => el('option', { value: t.id }, [t.name])));
-    championSelect.value = champion;
-    championSelect.addEventListener('change', (e) => { champion = e.target.value; });
+    let actualBracket = S.sanitizeBracket(order, state.seasonActualBracket || S.emptyBracket());
 
     const list = el('div', { className: 'card' });
     function move(i, dir) {
       const j = i + dir;
       if (j < 0 || j >= order.length) return;
       [order[i], order[j]] = [order[j], order[i]];
+      actualBracket = S.sanitizeBracket(order, actualBracket);
       rerenderList();
+      rerenderBracket();
     }
     function rerenderList() {
       list.innerHTML = '';
       order.forEach((teamId, i) => {
-        list.appendChild(el('div', { className: 'boost-row' }, [
-          el('div', {}, [(i + 1) + '. ' + teamLabel(teamId)]),
+        const bg = rankBg(i + 1);
+        list.appendChild(el('div', { className: 'boost-row', style: bg ? { background: bg, borderRadius: '8px', margin: '2px 0', padding: '8px' } : {} }, [
+          el('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [teamChip(teamId), (i + 1) + '. ' + teamLabel(teamId)]),
           el('div', { style: { display: 'flex', gap: '4px' } }, [
             el('button', { className: 'btn btn-sm btn-ghost', disabled: i === 0, onClick: () => move(i, -1) }, ['▲']),
             el('button', { className: 'btn btn-sm btn-ghost', disabled: i === order.length - 1, onClick: () => move(i, 1) }, ['▼']),
@@ -296,25 +333,86 @@
         ]));
       });
     }
+
+    const bracketWrap = el('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px' } });
+    function rerenderBracket() {
+      bracketWrap.innerHTML = '';
+      const m = S.bracketMatchups(order, actualBracket);
+      const rounds = [
+        ['qf1', 'Quart 1 (3e vs 6e)'], ['qf2', 'Quart 2 (4e vs 5e)'],
+        ['sf1', 'Demi 1'], ['sf2', 'Demi 2'], ['final', 'Finale'],
+      ];
+      rounds.forEach(([key, label]) => {
+        const matchup = m[key];
+        const winnerKey = key + 'Winner';
+        const ready = matchup.home && matchup.away;
+        bracketWrap.appendChild(el('div', { className: 'card', style: { padding: '10px', opacity: ready ? '1' : '.5' } }, [
+          el('div', { className: 'muted small', style: { marginBottom: '6px', fontWeight: '750', fontSize: '10px', textTransform: 'uppercase' } }, [label]),
+          el('div', { className: 'single-picker' }, ['home', 'away'].map((side) => {
+            const teamId = matchup[side];
+            const isWinner = teamId && actualBracket[winnerKey] === teamId;
+            return el('div', {
+              className: 'pick-item' + (isWinner ? ' active' : ''),
+              style: { opacity: teamId ? '1' : '.5', cursor: ready ? 'pointer' : 'default' },
+              onClick: !ready ? null : () => {
+                actualBracket[winnerKey] = actualBracket[winnerKey] === teamId ? null : teamId;
+                actualBracket = S.sanitizeBracket(order, actualBracket);
+                rerenderBracket();
+              },
+            }, [teamChip(teamId), ' ', teamId ? teamLabel(teamId) : 'En attente...']);
+          })),
+        ]));
+      });
+    }
     rerenderList();
+    rerenderBracket();
 
     root.appendChild(el('div', { className: 'section-title' }, ['🏁 Classement final réel (à remplir en fin de saison)']));
-    root.appendChild(el('div', { className: 'card' }, [
-      el('div', { className: 'field' }, [el('label', {}, ['🏆 Vrai champion']), championSelect]),
-    ]));
     root.appendChild(list);
+    root.appendChild(el('div', { className: 'section-title' }, ['Tableau des playoffs réel']));
+    root.appendChild(bracketWrap);
     root.appendChild(el('button', {
       className: 'btn btn-primary btn-block', style: { margin: '10px 0 20px' },
       onClick: async (e) => {
         const btn = e.target;
         btn.disabled = true; btn.textContent = 'Enregistrement...';
-        const res = await window.D1P.services.seasonPredictionService.setFinalResult(order, champion);
+        const res = await S.setFinalResult(order, actualBracket);
         btn.disabled = false; btn.textContent = 'Enregistrer le classement final réel';
         if (!res.ok) { window.D1P.components.toast.show(res.reason, 'error'); return; }
         window.D1P.components.toast.show('Classement final enregistré — les pronostics de saison sont maintenant comparés ✅', 'success');
         rerender();
       },
     }, ['Enregistrer le classement final réel']));
+
+    // Verrouillage individuel — un manager qui a validé définitivement peut être débloqué ici s'il a fait une erreur.
+    root.appendChild(el('div', { className: 'section-title' }, ['🔐 Pronostics individuels']));
+    const predictions = S.listSeasonPredictions();
+    const managers = window.D1P.services.managerService.listManagers();
+    const predList = el('div', { className: 'card' });
+    managers.forEach((mgr) => {
+      const prediction = predictions.find((p) => p.managerId === mgr.id);
+      let statusBadge;
+      if (!prediction) statusBadge = el('span', { className: 'badge' }, ['Pas encore pronostiqué']);
+      else if (prediction.locked) statusBadge = el('span', { className: 'badge badge-green' }, ['🔒 Validé']);
+      else statusBadge = el('span', { className: 'badge' }, ['Brouillon']);
+
+      predList.appendChild(el('div', { className: 'boost-row' }, [
+        el('div', { className: 'boost-label' }, [mgr.name]),
+        el('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } }, [
+          statusBadge,
+          (prediction && prediction.locked) ? el('button', {
+            className: 'btn btn-sm btn-ghost',
+            onClick: async () => {
+              const res = await S.unlockPrediction(mgr.id);
+              if (!res.ok) { window.D1P.components.toast.show(res.reason, 'error'); return; }
+              window.D1P.components.toast.show('Pronostic déverrouillé — ' + mgr.name + ' peut à nouveau le modifier ✅', 'success');
+              rerender();
+            },
+          }, ['🔓 Débloquer']) : null,
+        ]),
+      ]));
+    });
+    root.appendChild(predList);
   }
 
   function render(root) {

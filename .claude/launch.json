@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "d1-pronos",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["/private/tmp/claude-501/-Users-alex-Desktop-Claude/71192a7a-0610-4185-9b3c-0b8fe0fbf493/scratchpad/static-server.js", ".", "8791"],
+      "port": 8791
+    }
+  ]
+}

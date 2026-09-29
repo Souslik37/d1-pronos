@@ -38,7 +38,7 @@
   function seasonPredictionRowToApp(row) {
     return {
       managerId: row.manager_id, predictedOrder: row.predicted_order || [],
-      predictedChampion: row.predicted_champion, submittedAt: row.submitted_at,
+      predictedBracket: row.predicted_bracket || null, locked: !!row.locked, submittedAt: row.submitted_at,
     };
   }
 
@@ -92,7 +92,7 @@
       // seasonPredictionService.scoreSeasonPrediction) — null tant que la
       // saison n'est pas terminée.
       seasonActualOrder: (settingsRes.data && settingsRes.data.actual_order) || null,
-      seasonActualChampion: (settingsRes.data && settingsRes.data.actual_champion) || null,
+      seasonActualBracket: (settingsRes.data && settingsRes.data.actual_bracket) || null,
     };
   }
 
@@ -165,7 +165,7 @@
   async function saveSeasonPredictionRow(managerId, prediction) {
     const { error } = await client().from('season_predictions').upsert({
       manager_id: managerId, predicted_order: prediction.predictedOrder,
-      predicted_champion: prediction.predictedChampion, submitted_at: prediction.submittedAt,
+      predicted_bracket: prediction.predictedBracket, locked: !!prediction.locked, submitted_at: prediction.submittedAt,
     });
     if (error) console.error('[storageService] échec sauvegarde pronostic de saison', error);
     return !error;
@@ -177,9 +177,9 @@
     return !error;
   }
 
-  /** Admin uniquement, en toute fin de saison : classement final réel + champion, pour pouvoir comparer les pronostics de saison. */
-  async function setSeasonFinalResult(actualOrder, actualChampion) {
-    const { error } = await client().from('season_settings').update({ actual_order: actualOrder, actual_champion: actualChampion }).eq('id', 1);
+  /** Admin uniquement, en toute fin de saison : classement final réel + tableau des playoffs réel, pour pouvoir comparer les pronostics de saison. */
+  async function setSeasonFinalResult(actualOrder, actualBracket) {
+    const { error } = await client().from('season_settings').update({ actual_order: actualOrder, actual_bracket: actualBracket }).eq('id', 1);
     if (error) console.error('[storageService] échec enregistrement du classement final', error);
     return !error;
   }

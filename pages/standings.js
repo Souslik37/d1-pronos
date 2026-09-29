@@ -20,7 +20,7 @@
 
   function teamCell(team) {
     const wrap = el('span', {});
-    wrap.innerHTML = window.D1P.utils.avatar.renderAvatar(team.name, null, 26);
+    wrap.innerHTML = window.D1P.utils.avatar.renderAvatar(team.name, team.logoUrl, 26, { square: true });
     return el('td', {}, [el('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700' } }, [wrap, team.name])]);
   }
 

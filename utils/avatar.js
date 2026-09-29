@@ -33,15 +33,24 @@
     return PALETTE[hashString(str) % PALETTE.length];
   }
 
-  /** Renvoie un fragment HTML (chaîne) prêt à insérer. */
-  function renderAvatar(name, avatarUrl, size) {
+  /**
+   * Renvoie un fragment HTML (chaîne) prêt à insérer. `opts.square` : à
+   * utiliser pour des logos de club plutôt que des visages — les crests
+   * réels ne sont pas tous carrés/ronds (wordmarks très larges, écussons...,
+   * voir logos club/), donc pas de recadrage en cercle qui couperait le
+   * contenu : coins arrondis + image entière visible (object-fit: contain,
+   * voir styles.css `.team-logo`).
+   */
+  function renderAvatar(name, avatarUrl, size, opts) {
     size = size || 48;
+    opts = opts || {};
     const esc = window.D1P.utils.dom.escapeHtml;
+    const cls = 'avatar' + (opts.square ? ' team-logo' : '');
     if (avatarUrl) {
-      return `<img class="avatar" src="${esc(avatarUrl)}" alt="${esc(name)}" style="width:${size}px;height:${size}px" />`;
+      return `<img class="${cls}" src="${esc(avatarUrl)}" alt="${esc(name)}" style="width:${size}px;height:${size}px" />`;
     }
     const bg = colorFromString(name || '?');
-    return `<div class="avatar avatar-placeholder" style="width:${size}px;height:${size}px;background:${bg};font-size:${Math.round(size * 0.4)}px">${esc(initials(name || '?'))}</div>`;
+    return `<div class="${cls} avatar-placeholder" style="width:${size}px;height:${size}px;background:${bg};font-size:${Math.round(size * 0.4)}px">${esc(initials(name || '?'))}</div>`;
   }
 
   window.D1P.utils.avatar = { initials, colorFromString, renderAvatar };

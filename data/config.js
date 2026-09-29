@@ -1,14 +1,13 @@
 /**
  * D1 Pronos — Configuration
  *
- * Format du championnat de Belgique de rugby D1 (10 équipes, aller-retour,
- * vérifié début saison 2025-2026 — voir la note ci-dessous si le format
- * change) : 18 journées de saison régulière, puis playoffs (top 6 : les 2
- * premiers exemptés vont direct en demi, les 3e à 6e jouent les quarts) et
- * play-downs (les 4 derniers ; le 10e descend direct, le 9e joue un barrage
- * contre le finaliste de D2). Rien de tout ça n'est en dur ailleurs que dans
- * ce fichier — si la Ligue Belge Francophone de Rugby change le format,
- * c'est ici que ça se met à jour.
+ * Format du championnat de Belgique de rugby D1 (10 équipes, aller-retour) :
+ * 18 journées de saison régulière, puis playoffs (top 6 : les 2 premiers
+ * exemptés vont direct en demi, les 3e à 6e jouent les quarts) et play-downs
+ * (les 4 derniers ; 9e et 10e descendent directement en D2, le 8e joue un
+ * barrage contre le 1er de D2). Rien de tout ça n'est en dur ailleurs que
+ * dans ce fichier — si la Ligue Belge Francophone de Rugby change le
+ * format, c'est ici que ça se met à jour.
  */
 (function () {
   window.D1P = window.D1P || {};
@@ -19,7 +18,8 @@
       totalMatchdays: 18,
       teamsCount: 10,
       playoffSpots: 6, // 1er-2e : exemptés (demi direct) ; 3e-6e : quarts
-      playdownSpots: 4, // les 4 derniers ; 10e = descente directe, 9e = barrage
+      barrageRank: 8, // 8e : barrage contre le 1er de D2 (le 7e reste en D1 sans risque)
+      relegatedFromRank: 9, // 9e ET 10e : descente directe en D2
     },
 
     // Système de points de classement standard (rugby à XV, bonus offensif/

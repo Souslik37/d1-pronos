@@ -487,6 +487,18 @@ textarea { resize: vertical; min-height: 70px; }
   display: flex; align-items: center; justify-content: center;
   color: #fff; font-weight: 800;
 }
+/* Logos de club : pas de recadrage en cercle (écussons/wordmarks pas tous
+   carrés) — coin arrondi + image entière visible sur un fond clair fixe,
+   cohérent même quand le fichier source est transparent ou tout en largeur. */
+.avatar.team-logo {
+  border-radius: 8px;
+  object-fit: contain;
+  background: #fff;
+  padding: 3px;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+}
+.avatar-placeholder.team-logo { border-radius: 8px; }
 
 /* ============================================================
    Players grid

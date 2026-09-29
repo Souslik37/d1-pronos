@@ -14,8 +14,9 @@
   }
 
   function teamBadge(teamId, size) {
+    const team = window.D1P.services.seasonService.getTeam(teamId);
     const wrap = el('span', {});
-    wrap.innerHTML = window.D1P.utils.avatar.renderAvatar(teamLabel(teamId), null, size || 28);
+    wrap.innerHTML = window.D1P.utils.avatar.renderAvatar(team ? team.name : '—', team && team.logoUrl, size || 28, { square: true });
     return wrap;
   }
 
@@ -107,7 +108,7 @@
       el('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '750' } }, [teamBadge(match.homeTeamId), teamLabel(match.homeTeamId), el('span', { className: 'muted' }, ['vs']), teamLabel(match.awayTeamId), teamBadge(match.awayTeamId)]),
       graded
         ? el('div', { style: { fontWeight: '800' } }, [match.result.scoreHome + ' – ' + match.result.scoreAway])
-        : el('div', { className: 'muted small' }, [match.status === 'ouvert' ? '' : '🔒 Pronostics fermés']),
+        : el('div', { className: 'muted small' }, [window.D1P.utils.format.formatDateFr(match.date, { short: true }), match.status === 'ouvert' ? '' : ' · 🔒']),
     ]));
 
     if (!hasPrediction) {
