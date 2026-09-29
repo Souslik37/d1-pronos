@@ -16,7 +16,7 @@
   window.D1P.data = window.D1P.data || {};
 
   window.D1P.data.SUPABASE_CONFIG = {
-    url: 'REMPLACE_MOI — ex: https://xxxxxxxxxxxx.supabase.co',
-    publishableKey: 'REMPLACE_MOI — ex: sb_publishable_xxxxxxxxxxxxxxxxxxxxxx',
+    url: 'https://rgonsyjgkycmyhztpuyv.supabase.co',
+    publishableKey: 'sb_publishable_Stfi2D0xyEHyxforXbBcUg_5VT0yqg9',
   };
 })();

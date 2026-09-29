@@ -2,7 +2,9 @@
  * D1 Pronos — Connexion / Création de profil
  *
  * L'utilisateur ne voit jamais "email" ni "mot de passe" : uniquement un
- * nom et un code à 4 chiffres (voir services/authService.js).
+ * pseudo et un code à 4 chiffres (voir services/authService.js — en
+ * interne c'est toujours "name", le mot "pseudo" n'est qu'un choix
+ * d'affichage plus parlant que "nom").
  */
 (function () {
   window.D1P = window.D1P || {};
@@ -36,7 +38,7 @@
     }
 
     function buildLogin() {
-      const nameInput = el('input', { type: 'text', placeholder: 'Ton nom', value: name, onInput: (e) => { name = e.target.value; } });
+      const nameInput = el('input', { type: 'text', placeholder: 'Ton pseudo', value: name, onInput: (e) => { name = e.target.value; } });
       const pinField = pinInput(pin, (v) => { pin = v; });
 
       const submitBtn = el('button', {
@@ -44,7 +46,7 @@
         onClick: async () => {
           if (busy) return;
           if (!name.trim() || pin.length !== 4) {
-            window.D1P.components.toast.show('Renseigne ton nom et ton code à 4 chiffres.', 'error');
+            window.D1P.components.toast.show('Renseigne ton pseudo et ton code à 4 chiffres.', 'error');
             return;
           }
           busy = true; submitBtn.disabled = true; submitBtn.textContent = 'Connexion...';
@@ -65,8 +67,8 @@
         buildModeTabs(),
         el('div', { className: 'onboard-logo' }, ['🏉']),
         el('h1', {}, ['Content de te revoir']),
-        el('p', { className: 'sub' }, ['Retape ton nom et ton code à 4 chiffres.']),
-        el('div', { className: 'field' }, [el('label', {}, ['Ton nom']), nameInput]),
+        el('p', { className: 'sub' }, ['Retape ton pseudo et ton code à 4 chiffres.']),
+        el('div', { className: 'field' }, [el('label', {}, ['Pseudo']), nameInput]),
         el('div', { className: 'field' }, [el('label', {}, ['Ton code à 4 chiffres']), pinField]),
         submitBtn,
       ]);
@@ -81,7 +83,7 @@
         className: 'btn btn-primary btn-block',
         onClick: async () => {
           if (busy) return;
-          if (!name.trim()) { window.D1P.components.toast.show('Choisis un nom.', 'error'); return; }
+          if (!name.trim()) { window.D1P.components.toast.show('Choisis un pseudo.', 'error'); return; }
           if (pin.length !== 4) { window.D1P.components.toast.show('Le code doit faire 4 chiffres.', 'error'); return; }
           if (pin !== pinConfirm) { window.D1P.components.toast.show('Les deux codes ne correspondent pas.', 'error'); return; }
           busy = true; submitBtn.disabled = true; submitBtn.textContent = 'Création en cours...';
@@ -103,8 +105,9 @@
         buildModeTabs(),
         el('div', { className: 'onboard-logo' }, ['🏉']),
         el('h1', {}, ['D1 Pronos']),
-        el('p', { className: 'sub' }, ['Pronostics sur tout le championnat de Belgique — choisis un nom et un code à 4 chiffres.']),
-        el('div', { className: 'field' }, [el('label', {}, ['Ton nom']), nameInput]),
+        el('p', { className: 'sub' }, ['Pronostics sur tout le championnat de Belgique — choisis un pseudo et un code à 4 chiffres.']),
+        el('div', { className: 'field' }, [el('label', {}, ['Pseudo *']), nameInput]),
+        el('div', { className: 'field-hint', style: { marginTop: '-10px', marginBottom: '14px' } }, ['* à bien retenir : c\'est lui, avec ton code, qui te sert à te reconnecter.']),
         el('div', { className: 'field' }, [el('label', {}, ['Ton code à 4 chiffres']), pinField]),
         el('div', { className: 'field' }, [el('label', {}, ['Confirme le code']), pinConfirmField]),
         el('div', { className: 'field-hint', style: { marginBottom: '14px' } }, ['Retiens bien ce code : il n\'y a pas de mail de récupération, il faudra demander à l\'admin de le réinitialiser si tu l\'oublies.']),
