@@ -45,7 +45,11 @@
     return 'Maintien tranquille';
   }
 
-  /** Liste réordonnable par flèches ▲▼ — plus fiable que le drag-and-drop natif, y compris au tactile. */
+  /**
+   * Liste réordonnable par flèches ▲▼ (pas de drag-and-drop natif — peu
+   * fiable, surtout au tactile) + un menu déroulant par ligne pour sauter
+   * direct à un rang précis (ex: passer la 10e à la 1ère place sans 9 clics).
+   */
   function buildReorderList(order, onChange) {
     const list = el('div', { className: 'card' });
     function move(i, dir) {
@@ -55,11 +59,23 @@
       rerender();
       onChange();
     }
+    function moveTo(i, newIndex) {
+      if (newIndex < 0 || newIndex >= order.length || newIndex === i) return;
+      const [teamId] = order.splice(i, 1);
+      order.splice(newIndex, 0, teamId);
+      rerender();
+      onChange();
+    }
     function rerender() {
       list.innerHTML = '';
       order.forEach((teamId, i) => {
         const rank = i + 1;
         const bg = rankBg(rank);
+        const rankSelect = el('select', {
+          title: 'Déplacer directement à ce rang',
+          style: { width: '56px' },
+          onChange: (e) => moveTo(i, Number(e.target.value) - 1),
+        }, order.map((_, idx) => el('option', { value: idx + 1, selected: idx === i }, [String(idx + 1)])));
         list.appendChild(el('div', {
           className: 'boost-row', style: bg ? { background: bg, borderRadius: '8px', margin: '2px 0', padding: '10px 8px' } : {},
         }, [
@@ -71,7 +87,8 @@
               el('div', { className: 'muted small' }, [rankHint(rank)]),
             ]),
           ]),
-          el('div', { style: { display: 'flex', gap: '4px' } }, [
+          el('div', { style: { display: 'flex', gap: '4px', alignItems: 'center' } }, [
+            rankSelect,
             el('button', { className: 'btn btn-sm btn-ghost', disabled: i === 0, onClick: () => move(i, -1) }, ['▲']),
             el('button', { className: 'btn btn-sm btn-ghost', disabled: i === order.length - 1, onClick: () => move(i, 1) }, ['▼']),
           ]),
