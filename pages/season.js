@@ -45,116 +45,23 @@
     return 'Maintien tranquille';
   }
 
-  /**
-   * Liste réordonnable par glisser-déposer (poignée ⠿, Pointer Events — pas
-   * l'API drag-and-drop native du navigateur, peu fiable au tactile) + les
-   * flèches ▲▼ en secours. Pendant le glissement, seul un aperçu visuel
-   * (translateY) bouge ; `order` n'est modifié qu'au relâchement, puis un
-   * rerender complet remet tout au propre.
-   */
+  /** Le classement final pronostiqué : liste glisser-déposer partagée (voir components/reorderList.js), avec le rang, sa couleur et ce qu'il implique. */
   function buildReorderList(order, onChange) {
-    const list = el('div', { className: 'card', style: { position: 'relative' } });
-
-    function move(i, dir) {
-      const j = i + dir;
-      if (j < 0 || j >= order.length) return;
-      [order[i], order[j]] = [order[j], order[i]];
-      rerender();
-      onChange();
-    }
-
-    /** Décale visuellement les autres lignes pour ouvrir un espace à l'endroit où la ligne draguée atterrirait si on lâchait maintenant. */
-    function previewShift(fromIndex, targetIndex, draggedRow, rowHeight) {
-      Array.from(list.children).forEach((r, idx) => {
-        if (r === draggedRow) return;
-        let shift = 0;
-        if (fromIndex < targetIndex && idx > fromIndex && idx <= targetIndex) shift = -1;
-        else if (fromIndex > targetIndex && idx < fromIndex && idx >= targetIndex) shift = 1;
-        r.style.transition = 'transform .12s ease';
-        r.style.transform = shift ? `translateY(${shift * rowHeight}px)` : '';
-      });
-    }
-
-    function attachDrag(row, handle, getIndex) {
-      let dragging = false;
-      let startY = 0;
-      let rowHeight = 0;
-      let fromIndex = 0;
-
-      handle.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        dragging = true;
-        fromIndex = getIndex();
-        startY = e.clientY;
-        rowHeight = row.offsetHeight;
-        try { handle.setPointerCapture(e.pointerId); } catch (err) { /* pas bloquant — le reorder marche même sans capture */ }
-        row.style.position = 'relative';
-        row.style.zIndex = '10';
-        row.style.boxShadow = '0 6px 16px rgba(35,30,15,.18)';
-      });
-
-      handle.addEventListener('pointermove', (e) => {
-        if (!dragging) return;
-        const deltaY = e.clientY - startY;
-        row.style.transform = `translateY(${deltaY}px)`;
-        const shift = Math.round(deltaY / rowHeight);
-        const targetIndex = Math.max(0, Math.min(order.length - 1, fromIndex + shift));
-        previewShift(fromIndex, targetIndex, row, rowHeight);
-      });
-
-      function endDrag(e) {
-        if (!dragging) return;
-        dragging = false;
-        try { handle.releasePointerCapture(e.pointerId); } catch (err) { /* idem */ }
-        const deltaY = e.clientY - startY;
-        const shift = Math.round(deltaY / rowHeight);
-        const targetIndex = Math.max(0, Math.min(order.length - 1, fromIndex + shift));
-        if (targetIndex !== fromIndex) {
-          const [teamId] = order.splice(fromIndex, 1);
-          order.splice(targetIndex, 0, teamId);
-          onChange();
-        }
-        rerender();
-      }
-      handle.addEventListener('pointerup', endDrag);
-      handle.addEventListener('pointercancel', endDrag);
-    }
-
-    function rerender() {
-      list.innerHTML = '';
-      order.forEach((teamId, i) => {
+    return window.D1P.components.reorderList.build(order, {
+      renderContent: (teamId, i) => {
         const rank = i + 1;
-        const bg = rankBg(rank);
-        const handle = el('span', {
-          style: {
-            cursor: 'grab', fontSize: '18px', color: 'var(--text-3)', touchAction: 'none',
-            padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          },
-        }, ['⠿']);
-        const row = el('div', {
-          className: 'boost-row', style: bg ? { background: bg, borderRadius: '8px', margin: '2px 0', padding: '10px 8px' } : {},
-        }, [
-          el('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } }, [
-            handle,
-            el('div', { className: 'rank-badge' + (rank === 1 ? ' r1' : rank === 2 ? ' r2' : rank === 3 ? ' r3' : '') }, [String(rank)]),
-            teamBadge(teamId),
-            el('div', {}, [
-              el('div', { style: { fontWeight: '700' } }, [teamLabel(teamId)]),
-              el('div', { className: 'muted small' }, [rankHint(rank)]),
-            ]),
+        return [
+          el('div', { className: 'rank-badge' + (rank === 1 ? ' r1' : rank === 2 ? ' r2' : rank === 3 ? ' r3' : '') }, [String(rank)]),
+          teamBadge(teamId),
+          el('div', {}, [
+            el('div', { style: { fontWeight: '700' } }, [teamLabel(teamId)]),
+            el('div', { className: 'muted small' }, [rankHint(rank)]),
           ]),
-          el('div', { style: { display: 'flex', gap: '4px' } }, [
-            el('button', { className: 'btn btn-sm btn-ghost', disabled: i === 0, onClick: () => move(i, -1) }, ['▲']),
-            el('button', { className: 'btn btn-sm btn-ghost', disabled: i === order.length - 1, onClick: () => move(i, 1) }, ['▼']),
-          ]),
-        ]);
-        attachDrag(row, handle, () => Array.from(list.children).indexOf(row));
-        list.appendChild(row);
-      });
-    }
-    rerender();
-    list.__rerender = rerender; // ré-exposé pour que le parent puisse forcer un refresh après un changement de bracket qui ne vient pas d'ici
-    return list;
+        ];
+      },
+      background: (i) => rankBg(i + 1),
+      onChange,
+    });
   }
 
   /**
