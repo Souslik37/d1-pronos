@@ -44,12 +44,18 @@
       el('p', {}, ['Pronostics purs sur tout le championnat de Belgique D1 — pas de points compliqués, juste qui gagne.']),
     ]));
 
-    const grid = el('div', { className: 'dash-grid' }, [
+    const cards = [
       quickCard('🎯', 'Journée ' + targetMatchday, matchdayText, () => { window.D1P.pages.matchday.goTo(targetMatchday); window.location.hash = '#matchday'; }),
       quickCard('🔮', 'Ma saison', seasonLocked ? (seasonPrediction ? 'Pronostic verrouillé — voir le détail' : 'Saison commencée, trop tard') : (seasonPrediction ? 'Modifier mon pronostic' : 'Pas encore fait — à faire avant le coup d\'envoi !'), () => { window.location.hash = '#season'; }),
       quickCard('🏆', 'Classement', 'Le vrai classement du championnat, et qui devine le mieux', () => { window.location.hash = '#standings'; }),
-    ]);
-    root.appendChild(grid);
+    ];
+    // Sans ce rappel personne ne devine que la pastille en haut à droite est cliquable : il disparaît dès que prénom ET nom sont renseignés.
+    const profile = window.D1P.services.managerService.getProfile(manager.id);
+    if (!profile.firstName || !profile.lastName) {
+      cards.push(quickCard('👤', 'Complète ton profil', 'Prénom, nom et club que tu supportes — facultatif, visible des autres joueurs',
+        () => window.D1P.components.profile.openEditor()));
+    }
+    root.appendChild(el('div', { className: 'dash-grid' }, cards));
   }
 
   window.D1P.pages.home = { render };

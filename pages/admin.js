@@ -342,14 +342,22 @@
   }
 
   function buildManagersSection(root, rerender) {
-    root.appendChild(el('div', { className: 'section-title' }, ['👥 Managers']));
     const activeManager = window.D1P.services.managerService.getActiveManager();
     const managers = window.D1P.services.managerService.listManagers();
-    const list = el('div', { className: 'card' });
+    const withName = managers.filter((m) => window.D1P.services.managerService.fullName(window.D1P.services.managerService.getProfile(m.id))).length;
+    root.appendChild(el('div', { className: 'section-title' }, ['👥 Managers (' + managers.length + ')']));
+    const list = el('div', { className: 'card' }, [
+      el('p', { className: 'muted small', style: { marginBottom: '6px' } }, [withName + ' sur ' + managers.length + ' ont renseigné leur nom (via "Mon profil", en haut à droite).']),
+    ]);
     managers.forEach((m) => {
       const isSelf = m.id === activeManager.id;
+      const profile = window.D1P.services.managerService.getProfile(m.id);
+      const details = [window.D1P.services.managerService.fullName(profile), profile.supportedClub].filter(Boolean).join(' · ');
       list.appendChild(el('div', { className: 'boost-row' }, [
-        el('div', { className: 'boost-label' }, [m.name]),
+        el('div', {}, [
+          el('div', { className: 'boost-label' }, [m.name]),
+          details ? el('div', { className: 'muted small' }, [details]) : null,
+        ]),
         el('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } }, [
           m.role === 'admin' ? el('span', { className: 'badge badge-yellow' }, ['Admin']) : null,
           el('button', {

@@ -129,7 +129,7 @@
     if (window.D1P.services.managerService.getActiveManager()) renderApp();
   });
 
-  window.D1P.app = { boot };
+  window.D1P.app = { boot, refresh: renderApp };
 
   document.addEventListener('DOMContentLoaded', boot);
 })();

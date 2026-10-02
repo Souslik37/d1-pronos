@@ -55,7 +55,10 @@
 
     const right = el('div', { className: 'topbar-right' });
     if (manager) {
-      right.appendChild(el('div', { className: 'manager-pill' }, [
+      right.appendChild(el('div', {
+        className: 'manager-pill', title: 'Mon profil', style: { cursor: 'pointer' },
+        onClick: () => window.D1P.components.profile.openEditor(),
+      }, [
         (() => {
           const wrap = el('span', {});
           wrap.innerHTML = window.D1P.utils.avatar.renderAvatar(manager.name, null, 26);

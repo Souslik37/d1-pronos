@@ -42,6 +42,10 @@
     };
   }
 
+  function profileRowToApp(row) {
+    return { firstName: row.first_name || '', lastName: row.last_name || '', supportedClub: row.supported_club || '' };
+  }
+
   /**
    * Charge tout ce dont l'app a besoin pour démarrer. Les pronostics
    * hebdomadaires de TOUS les managers sont chargés (contrairement à La
@@ -50,18 +54,21 @@
    * donc pas de fuite possible d'un pronostic encore "en jeu".
    */
   async function loadInitialState(activeManagerId) {
-    const [managersRes, teamsRes, matchesRes, predictionsRes, seasonPredictionsRes, settingsRes] = await Promise.all([
+    const [managersRes, teamsRes, matchesRes, predictionsRes, seasonPredictionsRes, settingsRes, profilesRes] = await Promise.all([
       client().from('managers').select('*'),
       client().from('teams').select('*'),
       client().from('matches').select('*').order('matchday'),
       client().from('predictions').select('*'),
       client().from('season_predictions').select('*'),
       client().from('season_settings').select('*').eq('id', 1).maybeSingle(),
+      client().from('profiles').select('*'),
     ]);
 
     for (const res of [managersRes, teamsRes, matchesRes, predictionsRes, seasonPredictionsRes]) {
       if (res.error) throw res.error;
     }
+    // Les profils sont un ajout après le lancement : pas dans la boucle ci-dessus — si la table n'existe pas encore (SQL pas encore collé), l'app doit démarrer quand même, juste sans profils.
+    if (profilesRes.error) console.warn('[storageService] profils indisponibles', profilesRes.error);
 
     const managers = {};
     managersRes.data.forEach((row) => { managers[row.id] = managerRowToApp(row); });
@@ -79,10 +86,14 @@
       seasonPredictions[p.managerId] = p;
     });
 
+    const profiles = {}; // managerId -> { firstName, lastName, supportedClub }
+    (profilesRes.data || []).forEach((row) => { profiles[row.manager_id] = profileRowToApp(row); });
+
     return {
       version: 1,
       activeManagerId,
       managers,
+      profiles,
       teams: teamsRes.data.map(teamRowToApp),
       matches: matchesRes.data.map(matchRowToApp),
       predictions,
@@ -99,6 +110,16 @@
   async function saveManagerRole(managerId, role) {
     const { error } = await client().from('managers').update({ role }).eq('id', managerId);
     if (error) console.error('[storageService] échec changement de rôle', error);
+    return !error;
+  }
+
+  /** Upsert du profil d'UN manager (le sien, ou n'importe lequel pour un admin — voir schema.sql profiles_*). */
+  async function saveProfileRow(managerId, profile) {
+    const { error } = await client().from('profiles').upsert({
+      manager_id: managerId, first_name: profile.firstName || null, last_name: profile.lastName || null,
+      supported_club: profile.supportedClub || null, updated_at: new Date().toISOString(),
+    });
+    if (error) console.error('[storageService] échec sauvegarde du profil', error);
     return !error;
   }
 
@@ -192,7 +213,7 @@
   }
 
   window.D1P.services.storageService = {
-    loadInitialState, saveManagerRole, deleteManager,
+    loadInitialState, saveManagerRole, deleteManager, saveProfileRow,
     insertTeam, updateTeam,
     insertMatch, updateMatch, deleteMatch, setMatchdayStatus,
     savePredictionRow, loadPredictionsForMatch,

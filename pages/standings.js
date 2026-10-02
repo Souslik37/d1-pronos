@@ -93,7 +93,10 @@
         el('thead', {}, [el('tr', {}, ['#', 'Manager', 'Pronostics exacts', '%'].map((h) => el('th', {}, [h])))]),
         el('tbody', {}, rows.map((r) => el('tr', {}, [
           el('td', {}, [guesserRankBadge(r, matches.length > 0)]),
-          el('td', { style: { fontWeight: '700' } }, [r.manager.name]),
+          el('td', { style: { fontWeight: '700' } }, [el('span', {
+            title: 'Voir le profil', style: { cursor: 'pointer', textDecoration: 'underline dotted', textUnderlineOffset: '3px' },
+            onClick: () => window.D1P.components.profile.openCard(r.manager.id),
+          }, [r.manager.name])]),
           el('td', { style: { fontWeight: '800', color: 'var(--green-text)' } }, [`${r.exact} / ${r.total}`]),
           el('td', { className: 'muted' }, [r.pct === null ? '—' : r.pct + '%']),
         ]))),

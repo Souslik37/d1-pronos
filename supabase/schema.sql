@@ -20,9 +20,10 @@ create table teams (
 );
 
 -- ── Calendrier ───────────────────────────────────────────────────────────
--- result : { scoreHome, scoreAway, triesHome, triesAway } — null tant que
--- le match n'est pas joué. Tout le reste (vainqueur, bonus, points de
--- classement) est recalculé à la volée depuis ces 4 nombres, jamais stocké.
+-- result : { winner: 'home'|'away'|'draw', bonusHome, bonusAway, closeMargin }
+-- — la même forme qu'un pronostic, saisie telle quelle par l'admin (pas de
+-- score brut ni d'essais) ; null tant que le match n'est pas joué. Les
+-- points de classement sont recalculés à la volée depuis ça, jamais stockés.
 -- home_team_id/away_team_id : nullable — un match de playoff peut être
 -- réservé (journée + date) avant que les deux qualifiés soient connus (voir
 -- pages/admin.js buildMatchRow, qui affiche "À déterminer" et laisse les
@@ -81,6 +82,20 @@ create table season_settings (
 );
 insert into season_settings (id, predictions_locked) values (1, false);
 
+-- ── Profils (prénom, nom, club supporté — tout facultatif) ───────────────
+-- Dans une table À PART et pas des colonnes de `managers` : managers est
+-- lisible par n'importe qui (même sans compte, avec la clé publique du
+-- site), alors qu'un vrai nom ne doit être lisible que par les comptes
+-- connectés — voir les policies et les grants plus bas.
+-- supported_club : nom d'un club de D1 (tel que dans teams.name) ou texte libre.
+create table profiles (
+  manager_id uuid primary key references managers(id) on delete cascade,
+  first_name text check (char_length(first_name) <= 60),
+  last_name text check (char_length(last_name) <= 80),
+  supported_club text check (char_length(supported_club) <= 80),
+  updated_at timestamptz not null default now()
+);
+
 -- ============================================================
 -- Row Level Security
 -- ============================================================
@@ -90,6 +105,7 @@ alter table matches enable row level security;
 alter table predictions enable row level security;
 alter table season_predictions enable row level security;
 alter table season_settings enable row level security;
+alter table profiles enable row level security;
 
 -- Managers : tout le monde peut lire les noms (classement, admin) ; on ne
 -- modifie que sa propre ligne, sauf un admin qui peut aussi modifier celle
@@ -172,6 +188,21 @@ create policy "season_settings_admin_write" on season_settings for update using 
   exists (select 1 from managers where id = auth.uid() and role = 'admin')
 );
 
+-- Profils : lisibles par les comptes connectés seulement (jamais par le
+-- public — voir aussi les grants, `anon` n'a aucun droit sur cette table) ;
+-- chacun écrit le sien, un admin peut corriger celui d'un autre.
+create policy "profiles_select_authenticated" on profiles for select to authenticated using (true);
+create policy "profiles_insert_own_or_admin" on profiles for insert to authenticated with check (
+  auth.uid() = manager_id or exists (select 1 from managers where id = auth.uid() and role = 'admin')
+);
+create policy "profiles_update_own_or_admin" on profiles for update to authenticated
+  using (
+    auth.uid() = manager_id or exists (select 1 from managers where id = auth.uid() and role = 'admin')
+  )
+  with check (
+    auth.uid() = manager_id or exists (select 1 from managers where id = auth.uid() and role = 'admin')
+  );
+
 -- ============================================================
 -- Droits Postgres de base — SÉPARÉS des règles RLS ci-dessus. RLS filtre
 -- QUELLES lignes sont visibles/modifiables, mais le rôle doit d'abord avoir
@@ -196,6 +227,8 @@ grant select, insert, update on public.season_predictions to authenticated;
 
 grant select on public.season_settings to anon, authenticated;
 grant update on public.season_settings to authenticated;
+
+grant select, insert, update on public.profiles to authenticated;
 
 -- service_role — utilisé UNIQUEMENT côté serveur (une future Edge Function,
 -- ex: réattribuer un code perdu — voir La Hulpe 3 pour le modèle exact le
