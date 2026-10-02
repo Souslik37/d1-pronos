@@ -57,6 +57,19 @@
     return matches[matches.length - 1].matchday;
   }
 
+  /**
+   * La journée dont l'admin doit s'occuper : la première qui a encore au
+   * moins un match pas noté (null si tout l'est). Pas currentMatchday(), faite
+   * pour les joueurs — elle saute à la journée suivante dès que le coup
+   * d'envoi est passé, alors que l'admin a encore à cette journée-là à la
+   * verrouiller (pour voir les pronostics du groupe) puis à encoder ses
+   * résultats.
+   */
+  function firstUnfinishedMatchday() {
+    const pending = listMatches().find((m) => m.status !== 'termine');
+    return pending ? pending.matchday : null;
+  }
+
   // ── Équipes (admin) ──────────────────────────────────────────────────────
   async function addTeam(id, name) {
     name = (name || '').trim();
@@ -202,7 +215,7 @@
   }
 
   window.D1P.services.seasonService = {
-    listTeams, getTeam, listMatches, getMatch, matchesForMatchday, currentMatchday, isMatchOpen,
+    listTeams, getTeam, listMatches, getMatch, matchesForMatchday, currentMatchday, firstUnfinishedMatchday, isMatchOpen,
     getStandingsOrder, setStandingsOrder, addTeam, renameTeam, setTeamLogo, addMatch, updateMatchInfo, removeMatch, setMatchdayStatus,
     finalizeMatch, unfinalizeMatch,
   };

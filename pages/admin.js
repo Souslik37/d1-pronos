@@ -302,7 +302,11 @@
       root.appendChild(el('div', { className: 'empty-state' }, [el('div', { className: 'ic' }, ['📅']), el('div', {}, ['Aucun match pour le moment.'])]));
       return;
     }
-    if (selectedMatchday === null || !matchdays.includes(selectedMatchday)) selectedMatchday = matchdays[0];
+    if (selectedMatchday === null || !matchdays.includes(selectedMatchday)) {
+      // Par défaut la journée à traiter (jamais les journées déjà finies) ; si tout est noté, la dernière.
+      const next = window.D1P.services.seasonService.firstUnfinishedMatchday();
+      selectedMatchday = matchdays.includes(next) ? next : matchdays[matchdays.length - 1];
+    }
 
     const select = el('select', {
       onChange: (e) => { selectedMatchday = Number(e.target.value); rerender(); },
