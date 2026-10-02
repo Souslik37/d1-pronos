@@ -40,10 +40,9 @@
   function isMatchOpen(match) {
     if (match.status !== 'ouvert') return false;
     if (!match.date) return true;
-    const S = window.D1P.data.CONFIG.season;
-    if (match.date < S.autoLockFromDate) return true; // rattrapage rétroactif (voir CONFIG) — pas de coupure automatique, le statut suffit
+    const hour = window.D1P.data.CONFIG.season.kickoffHour;
     const [y, m, d] = match.date.split('-').map(Number);
-    const kickoff = new Date(y, m - 1, d, S.kickoffHour, 0, 0);
+    const kickoff = new Date(y, m - 1, d, hour, 0, 0);
     return new Date() < kickoff;
   }
 

@@ -61,6 +61,7 @@
       p('Exemple : La Hulpe bat le R.O.C. avec le bonus offensif. Si tu avais prédit "La Hulpe gagne + bonus offensif", ce match compte pour toi. Si tu avais juste prédit "La Hulpe gagne" sans le bonus (ou avec le mauvais bonus), ce match ne compte pas — même si tu avais le bon vainqueur.'),
       p('Pourquoi aussi strict ? Pour qu\'il n\'y ait aucun intérêt à cocher les cases bonus "au cas où" — une case bonus cochée à tort te fait perdre le match, donc autant réfléchir avant de cocher.'),
       p('Le classement trie par nombre de pronostics exacts, puis par pourcentage de réussite en cas d\'égalité.'),
+      p(`Il démarre à la journée ${S.leaderboardFromMatchday} : les journées d'avant étaient déjà jouées quand le jeu a démarré, elles ne comptent pas — tout le monde repart de zéro.`),
     ]));
 
     wrap.appendChild(section('🔮', 'Ma saison', [

@@ -48,9 +48,25 @@
     ]);
   }
 
+  /** Médaille seulement si le rang est mérité : sans aucun match compté, ou à 0 pronostic exact, un rang 1-2-3 n'a pas de sens (ex æquo à 0). */
+  function guesserRankBadge(row, anyScored) {
+    if (!anyScored) return el('span', { className: 'rank-badge' }, ['–']);
+    const medal = row.exact > 0 ? (row.rank === 1 ? ' r1' : row.rank === 2 ? ' r2' : row.rank === 3 ? ' r3' : '') : '';
+    return el('span', { className: 'rank-badge' + medal }, [String(row.rank)]);
+  }
+
+  /**
+   * Affiché dès le départ (tout le monde à 0) plutôt que masqué tant
+   * qu'aucun match n'est noté, et ne compte que les matchs à partir de
+   * CONFIG.season.leaderboardFromMatchday — tout le monde repart de zéro à
+   * cette journée, même si des pronostics plus anciens existent ou si les
+   * résultats de J1/J2 sont encodés pour le vrai classement du championnat.
+   */
   function buildGuessersLeaderboard() {
+    const startMatchday = window.D1P.data.CONFIG.season.leaderboardFromMatchday;
     const managers = window.D1P.services.managerService.listManagers();
-    const matches = window.D1P.services.seasonService.listMatches().filter((m) => m.status === 'termine' && m.result);
+    const matches = window.D1P.services.seasonService.listMatches()
+      .filter((m) => m.matchday >= startMatchday && m.status === 'termine' && m.result);
 
     const rows = managers.map((m) => {
       let exact = 0, total = 0;
@@ -63,18 +79,20 @@
       return { manager: m, exact, total, pct: total ? Math.round((exact / total) * 100) : null };
     }).sort((a, b) => b.exact - a.exact || (b.pct || 0) - (a.pct || 0));
 
-    if (!matches.length) {
-      return el('div', { className: 'empty-state' }, [el('div', { className: 'ic' }, ['🎯']), el('div', {}, ['Aucun match noté pour le moment — revenez après la première journée jouée.'])]);
-    }
+    // Ex æquo = même rang.
+    rows.forEach((r, i) => {
+      const prev = rows[i - 1];
+      r.rank = prev && prev.exact === r.exact && (prev.pct || 0) === (r.pct || 0) ? prev.rank : i + 1;
+    });
 
     return el('div', {}, [
       el('p', { className: 'field-hint', style: { marginBottom: '10px' } }, [
-        'Un match ne compte que si tout est deviné juste — vainqueur ET bonus (voir l\'onglet Règles).',
+        `Le classement démarre à la journée ${startMatchday} : tout le monde repart de zéro. Un match ne compte que si tout est deviné juste — vainqueur ET bonus (voir l'onglet Règles).`,
       ]),
       el('table', { className: 'standings-table' }, [
         el('thead', {}, [el('tr', {}, ['#', 'Manager', 'Pronostics exacts', '%'].map((h) => el('th', {}, [h])))]),
-        el('tbody', {}, rows.map((r, i) => el('tr', {}, [
-          el('td', {}, [rankBadge(i)]),
+        el('tbody', {}, rows.map((r) => el('tr', {}, [
+          el('td', {}, [guesserRankBadge(r, matches.length > 0)]),
           el('td', { style: { fontWeight: '700' } }, [r.manager.name]),
           el('td', { style: { fontWeight: '800', color: 'var(--green-text)' } }, [`${r.exact} / ${r.total}`]),
           el('td', { className: 'muted' }, [r.pct === null ? '—' : r.pct + '%']),

@@ -201,6 +201,14 @@
     ]));
     root.appendChild(buildNav(allMatches));
 
+    // Les journées d'avant le démarrage du classement (J1/J2 : déjà jouées à l'ouverture du jeu) restent consultables mais ne comptent pas — autant le dire plutôt que de laisser les gens se demander pourquoi elles sont fermées.
+    const startMatchday = window.D1P.data.CONFIG.season.leaderboardFromMatchday;
+    if (currentMatchday < startMatchday) {
+      root.appendChild(el('div', { className: 'card', style: { marginBottom: '12px' } }, [
+        el('p', { className: 'small' }, [`Cette journée ne compte pas dans le classement — le jeu démarre à la journée ${startMatchday}, tout le monde repart de zéro.`]),
+      ]));
+    }
+
     if (!matches.length) {
       root.appendChild(el('div', { className: 'empty-state' }, [el('div', { className: 'ic' }, ['📅']), el('div', {}, ['Aucun match programmé pour cette journée.'])]));
       return;
