@@ -82,10 +82,14 @@
    * joués (jamais stocké nulle part — une seule source de vérité : les
    * résultats des matchs) : points, joués, victoires/nuls/défaites. Pas de
    * différentiel de points (aucun score réel n'est saisi, voir le
-   * commentaire en tête de fichier) — l'égalité au classement se tranche
-   * sur le nombre de victoires, puis alphabétique.
+   * commentaire en tête de fichier), donc le classement officiel — qui
+   * départage les égalités avec — peut différer. `tiebreakOrder` (liste
+   * d'ids d'équipes, réglée à la main par l'admin) sert à départager les
+   * équipes à égalité de POINTS ; les points passent toujours avant, sinon
+   * l'ordre deviendrait faux dès le résultat suivant. Sans ordre (ou pour
+   * les équipes qui n'y figurent pas) : nombre de victoires, puis alphabétique.
    */
-  function computeStandingsTable(matches, teams) {
+  function computeStandingsTable(matches, teams, tiebreakOrder) {
     const rows = {};
     teams.forEach((t) => {
       rows[t.id] = { team: t, points: 0, played: 0, won: 0, drawn: 0, lost: 0 };
@@ -104,8 +108,11 @@
       else { away.won += 1; home.lost += 1; }
     });
 
+    const manualRank = new Map((tiebreakOrder || []).map((id, i) => [id, i]));
+    const rankOf = (r) => (manualRank.has(r.team.id) ? manualRank.get(r.team.id) : Number.MAX_SAFE_INTEGER);
+
     return Object.values(rows)
-      .sort((a, b) => b.points - a.points || b.won - a.won || a.team.name.localeCompare(b.team.name, 'fr'));
+      .sort((a, b) => b.points - a.points || rankOf(a) - rankOf(b) || b.won - a.won || a.team.name.localeCompare(b.team.name, 'fr'));
   }
 
   window.D1P.services.scoringService = { computePoints, isPredictionCorrect, isPredictionExact, computeStandingsTable };

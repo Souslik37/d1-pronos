@@ -19,7 +19,7 @@
    * order : tableau d'ids, modifié SUR PLACE (c'est celui de l'appelant).
    * opts.renderContent(id, index) -> Node[] : ce qui s'affiche entre la poignée et les flèches.
    * opts.background(index) -> string|null : couleur de fond de la ligne (facultatif).
-   * opts.onChange() : appelé après chaque réordonnancement, `order` déjà à jour.
+   * opts.onChange() : appelé après chaque réordonnancement, `order` déjà à jour (facultatif).
    */
   function build(order, opts) {
     const list = el('div', { className: 'card', style: { position: 'relative' } });
@@ -29,7 +29,7 @@
       if (j < 0 || j >= order.length) return;
       [order[i], order[j]] = [order[j], order[i]];
       rerender();
-      opts.onChange();
+      if (opts.onChange) opts.onChange();
     }
 
     /** Décale visuellement les autres lignes pour ouvrir un espace à l'endroit où la ligne draguée atterrirait si on lâchait maintenant. */
@@ -84,7 +84,7 @@
         if (targetIndex !== fromIndex) {
           const [id] = order.splice(fromIndex, 1);
           order.splice(targetIndex, 0, id);
-          opts.onChange();
+          if (opts.onChange) opts.onChange();
         }
         rerender();
       }

@@ -104,6 +104,8 @@
       // saison n'est pas terminée.
       seasonActualOrder: (settingsRes.data && settingsRes.data.actual_order) || null,
       seasonActualBracket: (settingsRes.data && settingsRes.data.actual_bracket) || null,
+      // Ordre réglé à la main par l'admin pour départager les égalités de points du vrai classement (voir scoringService.computeStandingsTable) — null tant qu'il n'en a pas fixé.
+      standingsOrder: (settingsRes.data && settingsRes.data.standings_order) || null,
     };
   }
 
@@ -205,6 +207,13 @@
     return !error;
   }
 
+  /** Admin uniquement : ordre manuel qui départage les égalités de points du vrai classement. */
+  async function setStandingsOrder(order) {
+    const { error } = await client().from('season_settings').update({ standings_order: order }).eq('id', 1);
+    if (error) console.error('[storageService] échec enregistrement de l\'ordre du classement', error);
+    return !error;
+  }
+
   /** Admin uniquement, en toute fin de saison : classement final réel + tableau des playoffs réel, pour pouvoir comparer les pronostics de saison. */
   async function setSeasonFinalResult(actualOrder, actualBracket) {
     const { error } = await client().from('season_settings').update({ actual_order: actualOrder, actual_bracket: actualBracket }).eq('id', 1);
@@ -217,6 +226,6 @@
     insertTeam, updateTeam,
     insertMatch, updateMatch, deleteMatch, setMatchdayStatus,
     savePredictionRow, loadPredictionsForMatch,
-    saveSeasonPredictionRow, setSeasonLocked, setSeasonFinalResult,
+    saveSeasonPredictionRow, setSeasonLocked, setSeasonFinalResult, setStandingsOrder,
   };
 })();

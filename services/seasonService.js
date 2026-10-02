@@ -95,6 +95,25 @@
     return { ok: true };
   }
 
+  /** Ordre réglé à la main pour départager les égalités de points du vrai classement (ids d'équipes), ou null. */
+  function getStandingsOrder() {
+    return window.D1P.services.stateService.getState().standingsOrder || null;
+  }
+
+  /** Admin uniquement (RLS season_settings_admin_write). `order` : ids d'équipes, chacune une seule fois. */
+  async function setStandingsOrder(order) {
+    const state = window.D1P.services.stateService.getState();
+    const known = new Set(state.teams.map((t) => t.id));
+    if (!Array.isArray(order) || new Set(order).size !== order.length || order.some((id) => !known.has(id))) {
+      return { ok: false, reason: 'Ordre invalide : chaque équipe doit apparaître une seule fois.' };
+    }
+    const ok = await window.D1P.services.storageService.setStandingsOrder(order);
+    if (!ok) return { ok: false, reason: 'Écriture impossible — vérifie ta connexion et réessaie.' };
+    state.standingsOrder = order.slice();
+    window.D1P.services.stateService.notify();
+    return { ok: true };
+  }
+
   // ── Calendrier (admin) ───────────────────────────────────────────────────
   async function addMatch({ matchday, homeTeamId, awayTeamId, date }) {
     matchday = Number(matchday);
@@ -184,7 +203,7 @@
 
   window.D1P.services.seasonService = {
     listTeams, getTeam, listMatches, getMatch, matchesForMatchday, currentMatchday, isMatchOpen,
-    addTeam, renameTeam, setTeamLogo, addMatch, updateMatchInfo, removeMatch, setMatchdayStatus,
+    getStandingsOrder, setStandingsOrder, addTeam, renameTeam, setTeamLogo, addMatch, updateMatchInfo, removeMatch, setMatchdayStatus,
     finalizeMatch, unfinalizeMatch,
   };
 })();

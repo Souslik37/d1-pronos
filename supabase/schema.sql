@@ -73,11 +73,16 @@ create table season_predictions (
 -- saison une fois la journée 1 lancée ; actual_order/actual_bracket sont
 -- renseignés par l'admin en toute fin de saison pour comparer aux
 -- pronostics de chacun (voir seasonPredictionService.scoreSeasonPrediction).
+-- standings_order : [team_id, ...] réglé à la main par l'admin, ne sert qu'à
+-- départager les égalités de POINTS du vrai classement (voir
+-- scoringService.computeStandingsTable) — l'appli ne suit pas le différentiel
+-- de points marqués que le classement officiel utilise pour ça.
 create table season_settings (
   id int primary key default 1,
   predictions_locked boolean not null default false,
   actual_order jsonb,
   actual_bracket jsonb,
+  standings_order jsonb,
   check (id = 1)
 );
 insert into season_settings (id, predictions_locked) values (1, false);

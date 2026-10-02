@@ -141,6 +141,15 @@
     };
 
     const body = el('div', {});
+    // Les points que ce résultat donnera au classement — pareil que "Points prévus au classement" sur un pronostic, pour contrôler ce qu'on encode avant de valider.
+    const preview = el('div', { className: 'muted small', style: { marginTop: '12px', fontWeight: '650' } });
+    function refreshPreview() {
+      if (!state.winner) { preview.textContent = ''; return; }
+      const points = window.D1P.services.scoringService.computePoints({
+        winner: state.winner, bonusHome: state.bonusHome, bonusAway: state.bonusAway, closeMargin: state.winner !== 'draw' && state.closeMargin,
+      });
+      preview.textContent = `Points au classement : ${teamLabel(match.homeTeamId)} ${points.home} · ${teamLabel(match.awayTeamId)} ${points.away}`;
+    }
     function winnerOption(value, label) {
       return el('div', {
         className: 'pick-item' + (state.winner === value ? ' active' : ''),
@@ -151,7 +160,7 @@
       if (!state.winner || state.winner === 'draw') return null;
       const row = el('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px' } }, [
         el('label', { className: 'field-hint', style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: 0 } }, [
-          el('input', { type: 'checkbox', checked: state.closeMargin, onChange: (e) => { state.closeMargin = e.target.checked; } }),
+          el('input', { type: 'checkbox', checked: state.closeMargin, onChange: (e) => { state.closeMargin = e.target.checked; refreshPreview(); } }),
           'Écart serré (7 points ou moins) — bonus défensif pour ' + teamLabel(state.winner === 'home' ? match.awayTeamId : match.homeTeamId),
         ]),
         el('span', {
@@ -177,16 +186,18 @@
       ]));
       body.appendChild(el('div', { style: { display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '10px' } }, [
         el('label', { style: { display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px' } }, [
-          el('input', { type: 'checkbox', checked: state.bonusHome, onChange: (e) => { state.bonusHome = e.target.checked; } }),
+          el('input', { type: 'checkbox', checked: state.bonusHome, onChange: (e) => { state.bonusHome = e.target.checked; refreshPreview(); } }),
           teamLabel(match.homeTeamId) + ' marque 4 essais ou plus',
         ]),
         el('label', { style: { display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px' } }, [
-          el('input', { type: 'checkbox', checked: state.bonusAway, onChange: (e) => { state.bonusAway = e.target.checked; } }),
+          el('input', { type: 'checkbox', checked: state.bonusAway, onChange: (e) => { state.bonusAway = e.target.checked; refreshPreview(); } }),
           teamLabel(match.awayTeamId) + ' marque 4 essais ou plus',
         ]),
       ]));
       const closeMarginBlock = closeMarginBlockFor();
       if (closeMarginBlock) body.appendChild(closeMarginBlock);
+      body.appendChild(preview);
+      refreshPreview();
     }
     rerenderBody();
 
@@ -315,6 +326,53 @@
       ]),
     ]));
     dayMatches.forEach((m) => root.appendChild(buildMatchRow(m, rerender)));
+  }
+
+  // ── Classement du championnat (ordre des égalités) ────────────────────
+  function buildStandingsSection(root, rerender) {
+    const seasonService = window.D1P.services.seasonService;
+    const scoring = window.D1P.services.scoringService;
+    const teams = seasonService.listTeams();
+    const matches = seasonService.listMatches();
+    const table = scoring.computeStandingsTable(matches, teams, seasonService.getStandingsOrder());
+    const order = table.map((r) => r.team.id); // l'ordre actuellement affiché = point de départ
+    const points = {};
+    table.forEach((r) => { points[r.team.id] = r.points; });
+
+    root.appendChild(el('div', { className: 'section-title' }, ['📊 Classement du championnat']));
+    root.appendChild(el('div', { className: 'card', style: { marginBottom: '10px' } }, [
+      el('p', { className: 'small' }, [
+        'Les points se calculent tout seuls à partir des résultats. Ici tu règles seulement l\'ordre entre équipes à égalité de points : le classement officiel les départage avec la différence de points marqués, que l\'appli ne suit pas. Glisse une équipe (⠿) ou utilise les flèches, puis enregistre.',
+      ]),
+    ]));
+    root.appendChild(window.D1P.components.reorderList.build(order, {
+      renderContent: (teamId, i) => [
+        el('div', { className: 'rank-badge' + (i === 0 ? ' r1' : i === 1 ? ' r2' : i === 2 ? ' r3' : '') }, [String(i + 1)]),
+        teamChip(teamId),
+        el('div', {}, [
+          el('div', { style: { fontWeight: '700' } }, [teamLabel(teamId)]),
+          el('div', { className: 'muted small' }, [points[teamId] + ' pts']),
+        ]),
+      ],
+    }));
+    root.appendChild(el('button', {
+      className: 'btn btn-primary btn-block', style: { margin: '10px 0 20px' },
+      onClick: async (e) => {
+        const btn = e.target;
+        btn.disabled = true; btn.textContent = 'Enregistrement...';
+        const res = await seasonService.setStandingsOrder(order);
+        btn.disabled = false; btn.textContent = 'Enregistrer l\'ordre';
+        if (!res.ok) { window.D1P.components.toast.show(res.reason, 'error'); return; }
+        // Les points passent avant : une équipe glissée au-dessus d'une équipe qui a plus de points sera remise à sa place — on le dit plutôt que de laisser croire que ça n'a pas marché.
+        const effective = scoring.computeStandingsTable(matches, teams, order).map((r) => r.team.id);
+        const honored = effective.every((id, i) => id === order[i]);
+        window.D1P.components.toast.show(
+          honored ? 'Classement enregistré ✅' : 'Enregistré — les points passent avant : seules les égalités sont réordonnées.',
+          honored ? 'success' : '',
+        );
+        rerender();
+      },
+    }, ['Enregistrer l\'ordre']));
   }
 
   // ── Managers ──────────────────────────────────────────────────────────
@@ -521,6 +579,7 @@
     // équipes/logos quasi jamais une fois la saison lancée — donc tout en bas.
     function rerender() { render(root); }
     buildCalendarSection(root, rerender);
+    buildStandingsSection(root, rerender);
     buildManagersSection(root, rerender);
     buildSeasonSection(root, rerender);
     buildTeamsSection(root, rerender);

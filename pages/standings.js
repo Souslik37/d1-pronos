@@ -29,7 +29,7 @@
   function buildRealStandings() {
     const teams = window.D1P.services.seasonService.listTeams();
     const matches = window.D1P.services.seasonService.listMatches();
-    const table = window.D1P.services.scoringService.computeStandingsTable(matches, teams);
+    const table = window.D1P.services.scoringService.computeStandingsTable(matches, teams, window.D1P.services.seasonService.getStandingsOrder());
 
     if (!table.length) return el('div', { className: 'empty-state' }, [el('div', { className: 'ic' }, ['🏆']), el('div', {}, ['Aucune équipe pour le moment.'])]);
 
