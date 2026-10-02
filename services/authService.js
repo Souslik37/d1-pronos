@@ -55,13 +55,22 @@
   }
 
   /**
-   * Crée un nouveau profil. Renvoie { ok, reason?, session? } — NE REJETTE
-   * JAMAIS (try/catch large), pour ne jamais bloquer le bouton du formulaire.
+   * Crée un nouveau profil. Renvoie { ok, reason?, session?, profileSaved? } —
+   * NE REJETTE JAMAIS (try/catch large), pour ne jamais bloquer le bouton du
+   * formulaire. `profile` (prénom, nom, club — obligatoires, voir
+   * managerService.validateProfile) est vérifié AVANT de créer quoi que ce
+   * soit, puis enregistré en dernier : si cet enregistrement échoue (table
+   * pas encore créée, réseau...), le compte existe déjà et on ne va pas
+   * l'annuler pour ça — profileSaved vaut false et l'Accueil redemandera.
    */
-  async function signUp(name, pin) {
+  async function signUp(name, pin, profile) {
     name = name.trim();
     if (!name) return { ok: false, reason: 'Choisis un nom.' };
     if (!isValidPin(pin)) return { ok: false, reason: 'Le code doit être composé de 4 chiffres.' };
+    const managers = window.D1P.services.managerService;
+    const cleanProfile = managers.cleanProfile(profile || {});
+    const profileError = managers.validateProfile(cleanProfile);
+    if (profileError) return { ok: false, reason: profileError };
 
     try {
       if (await nameIsTaken(name)) {
@@ -86,7 +95,14 @@
       });
       if (insertError) return { ok: false, reason: insertError.message };
 
-      return { ok: true, session: data.session };
+      // Son propre try/catch : une exception ici ne doit surtout pas remonter au catch général, qui afficherait "connexion impossible" alors que le compte vient d'être créé (un nouvel essai dirait "nom déjà pris").
+      let profileSaved = false;
+      try {
+        profileSaved = await window.D1P.services.storageService.saveProfileRow(userId, cleanProfile);
+      } catch (e) {
+        console.warn('[authService] profil non enregistré à l\'inscription', e);
+      }
+      return { ok: true, session: data.session, profileSaved };
     } catch (e) {
       console.error('[authService] signUp a échoué de façon inattendue', e);
       return { ok: false, reason: 'Connexion au serveur impossible — vérifie ta connexion internet et réessaie.' };

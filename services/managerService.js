@@ -53,15 +53,39 @@
     return [profile.firstName, profile.lastName].filter(Boolean).join(' ');
   }
 
-  /** Chacun enregistre SON profil (RLS : un admin peut aussi corriger celui d'un autre). Tout est facultatif. */
-  async function saveProfile(managerId, data) {
-    const state = window.D1P.services.stateService.getState();
-    if (!state.managers[managerId]) return { ok: false, reason: 'Manager introuvable.' };
-    const profile = {
+  /**
+   * Prénom, nom et club sont obligatoires (à l'inscription comme dans "Mon
+   * profil"). Pour qui ne supporte aucun club, "Aucun club" est une réponse
+   * valable — sinon on récolterait des clubs bidon. Renvoie le message
+   * d'erreur à afficher, ou null si c'est bon.
+   */
+  function validateProfile(profile) {
+    if (!(profile.firstName || '').trim()) return 'Renseigne ton prénom.';
+    if (!(profile.lastName || '').trim()) return 'Renseigne ton nom.';
+    if (!(profile.supportedClub || '').trim()) return 'Choisis le club que tu supportes (ou « Aucun club en particulier »).';
+    return null;
+  }
+
+  function isProfileComplete(profile) {
+    return validateProfile(profile) === null;
+  }
+
+  /** Nettoie (espaces, longueurs max alignées sur les contraintes de la table profiles). */
+  function cleanProfile(data) {
+    return {
       firstName: (data.firstName || '').trim().slice(0, 60),
       lastName: (data.lastName || '').trim().slice(0, 80),
       supportedClub: (data.supportedClub || '').trim().slice(0, 80),
     };
+  }
+
+  /** Chacun enregistre SON profil (RLS : un admin peut aussi corriger celui d'un autre). */
+  async function saveProfile(managerId, data) {
+    const state = window.D1P.services.stateService.getState();
+    if (!state.managers[managerId]) return { ok: false, reason: 'Manager introuvable.' };
+    const profile = cleanProfile(data);
+    const invalid = validateProfile(profile);
+    if (invalid) return { ok: false, reason: invalid };
     const ok = await window.D1P.services.storageService.saveProfileRow(managerId, profile);
     if (!ok) return { ok: false, reason: 'Enregistrement impossible — vérifie ta connexion et réessaie.' };
     state.profiles = state.profiles || {};
@@ -70,5 +94,8 @@
     return { ok: true };
   }
 
-  window.D1P.services.managerService = { getActiveManager, listManagers, setRole, removeManager, getProfile, fullName, saveProfile };
+  window.D1P.services.managerService = {
+    getActiveManager, listManagers, setRole, removeManager,
+    getProfile, fullName, validateProfile, isProfileComplete, cleanProfile, saveProfile,
+  };
 })();

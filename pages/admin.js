@@ -402,10 +402,10 @@
   function buildManagersSection(root, rerender) {
     const activeManager = window.D1P.services.managerService.getActiveManager();
     const managers = window.D1P.services.managerService.listManagers();
-    const withName = managers.filter((m) => window.D1P.services.managerService.fullName(window.D1P.services.managerService.getProfile(m.id))).length;
+    const complete = managers.filter((m) => window.D1P.services.managerService.isProfileComplete(window.D1P.services.managerService.getProfile(m.id))).length;
     root.appendChild(el('div', { className: 'section-title' }, ['👥 Managers (' + managers.length + ')']));
     const list = el('div', { className: 'card' }, [
-      el('p', { className: 'muted small', style: { marginBottom: '6px' } }, [withName + ' sur ' + managers.length + ' ont renseigné leur nom (via "Mon profil", en haut à droite).']),
+      el('p', { className: 'muted small', style: { marginBottom: '6px' } }, [complete + ' sur ' + managers.length + ' ont complété leur profil (obligatoire à l\'inscription ; les premiers inscrits le complètent via "Mon profil", en haut à droite).']),
     ]);
     managers.forEach((m) => {
       const isSelf = m.id === activeManager.id;

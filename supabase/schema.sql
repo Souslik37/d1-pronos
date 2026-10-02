@@ -87,12 +87,16 @@ create table season_settings (
 );
 insert into season_settings (id, predictions_locked) values (1, false);
 
--- ── Profils (prénom, nom, club supporté — tout facultatif) ───────────────
+-- ── Profils (prénom, nom, club supporté) ─────────────────────────────────
+-- Obligatoires à l'inscription et dans "Mon profil" (vérifié côté appli,
+-- managerService.validateProfile) mais colonnes nullables : les premiers
+-- inscrits, d'avant l'obligation, n'ont pas de profil.
 -- Dans une table À PART et pas des colonnes de `managers` : managers est
 -- lisible par n'importe qui (même sans compte, avec la clé publique du
 -- site), alors qu'un vrai nom ne doit être lisible que par les comptes
 -- connectés — voir les policies et les grants plus bas.
--- supported_club : nom d'un club de D1 (tel que dans teams.name) ou texte libre.
+-- supported_club : nom d'un club de D1 (tel que dans teams.name), texte
+-- libre, ou "Aucun club" pour qui n'en supporte pas.
 create table profiles (
   manager_id uuid primary key references managers(id) on delete cascade,
   first_name text check (char_length(first_name) <= 60),
@@ -193,9 +197,12 @@ create policy "season_settings_admin_write" on season_settings for update using 
   exists (select 1 from managers where id = auth.uid() and role = 'admin')
 );
 
--- Profils : lisibles par les comptes connectés seulement (jamais par le
--- public — voir aussi les grants, `anon` n'a aucun droit sur cette table) ;
--- chacun écrit le sien, un admin peut corriger celui d'un autre.
+-- Profils : lisibles par les comptes connectés seulement. Aucune policy ne
+-- s'applique à `anon` (les requêtes sans compte) : RLS lui renvoie zéro
+-- ligne. C'est ça qui protège — pas les grants : sur Supabase, `anon` reçoit
+-- des droits par défaut sur toute nouvelle table, d'où le `revoke` plus bas
+-- qui lui ferme aussi l'accès à la table elle-même. Chacun écrit son profil,
+-- un admin peut corriger celui d'un autre.
 create policy "profiles_select_authenticated" on profiles for select to authenticated using (true);
 create policy "profiles_insert_own_or_admin" on profiles for insert to authenticated with check (
   auth.uid() = manager_id or exists (select 1 from managers where id = auth.uid() and role = 'admin')
@@ -234,6 +241,7 @@ grant select on public.season_settings to anon, authenticated;
 grant update on public.season_settings to authenticated;
 
 grant select, insert, update on public.profiles to authenticated;
+revoke all on public.profiles from anon;
 
 -- service_role — utilisé UNIQUEMENT côté serveur (une future Edge Function,
 -- ex: réattribuer un code perdu — voir La Hulpe 3 pour le modèle exact le

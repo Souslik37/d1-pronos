@@ -4,7 +4,9 @@
  * L'utilisateur ne voit jamais "email" ni "mot de passe" : uniquement un
  * pseudo et un code à 4 chiffres (voir services/authService.js — en
  * interne c'est toujours "name", le mot "pseudo" n'est qu'un choix
- * d'affichage plus parlant que "nom").
+ * d'affichage plus parlant que "nom"). À la création du compte on demande
+ * aussi prénom, nom et club supporté, obligatoires (voir
+ * components/profile.js buildFields).
  */
 (function () {
   window.D1P = window.D1P || {};
@@ -18,6 +20,9 @@
     let name = '';
     let pin = '';
     let pinConfirm = '';
+    // Prénom / nom / club saisis : renseignés avant chaque redessin pour ne pas être perdus quand on passe d'un onglet à l'autre.
+    let profileDraft = { firstName: '', lastName: '', supportedClub: '' };
+    let profileFields = null;
 
     function buildModeTabs() {
       return el('div', { className: 'tabs', style: { marginBottom: '20px' } }, [
@@ -78,6 +83,8 @@
       const nameInput = el('input', { type: 'text', placeholder: 'Ex : Fred', value: name, onInput: (e) => { name = e.target.value; } });
       const pinField = pinInput(pin, (v) => { pin = v; }, '4 chiffres');
       const pinConfirmField = pinInput(pinConfirm, (v) => { pinConfirm = v; }, 'Retape le code');
+      // Pas encore connecté : l'état n'est pas chargé, donc les clubs viennent de la liste de référence (data/teams.js).
+      profileFields = window.D1P.components.profile.buildFields(profileDraft, window.D1P.data.TEAMS.map((t) => t.name));
 
       const submitBtn = el('button', {
         className: 'btn btn-primary btn-block',
@@ -86,11 +93,19 @@
           if (!name.trim()) { window.D1P.components.toast.show('Choisis un pseudo.', 'error'); return; }
           if (pin.length !== 4) { window.D1P.components.toast.show('Le code doit faire 4 chiffres.', 'error'); return; }
           if (pin !== pinConfirm) { window.D1P.components.toast.show('Les deux codes ne correspondent pas.', 'error'); return; }
+          const profile = profileFields.read();
+          const managers = window.D1P.services.managerService;
+          const profileError = managers.validateProfile(managers.cleanProfile(profile));
+          if (profileError) { window.D1P.components.toast.show(profileError, 'error'); return; }
           busy = true; submitBtn.disabled = true; submitBtn.textContent = 'Création en cours...';
           try {
-            const res = await window.D1P.services.authService.signUp(name, pin);
+            const res = await window.D1P.services.authService.signUp(name, pin, profile);
             if (!res.ok) { window.D1P.components.toast.show(res.reason, 'error'); return; }
-            window.D1P.components.toast.show('Bienvenue ' + name + ' 👋', 'success');
+            if (res.profileSaved === false) {
+              window.D1P.components.toast.show('Compte créé, mais ton profil n\'a pas pu être enregistré — complète-le via ta pastille, en haut à droite.', 'error');
+            } else {
+              window.D1P.components.toast.show('Bienvenue ' + name + ' 👋', 'success');
+            }
             window.D1P.app.boot();
           } catch (e) {
             console.error('[onboarding] erreur inattendue à l\'inscription', e);
@@ -111,11 +126,14 @@
         el('div', { className: 'field' }, [el('label', {}, ['Ton code à 4 chiffres']), pinField]),
         el('div', { className: 'field' }, [el('label', {}, ['Confirme le code']), pinConfirmField]),
         el('div', { className: 'field-hint', style: { marginBottom: '14px' } }, ['Retiens bien ce code : il n\'y a pas de mail de récupération, il faudra demander à l\'admin de le réinitialiser si tu l\'oublies.']),
+        el('h2', { style: { fontSize: '14px', fontWeight: '800', margin: '18px 0 12px' } }, ['Et toi, c\'est qui ?']),
+        ...profileFields.nodes,
         submitBtn,
       ]);
     }
 
     function renderAll() {
+      if (profileFields) profileDraft = profileFields.read();
       root.innerHTML = '';
       root.appendChild(el('div', { className: 'onboard-shell' }, [mode === 'login' ? buildLogin() : buildSignup()]));
     }

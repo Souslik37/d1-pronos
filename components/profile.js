@@ -1,11 +1,14 @@
 /**
  * D1 Pronos — Profil des managers (prénom, nom, club supporté)
  *
+ * buildFields() : les trois champs, partagés entre l'inscription et
+ * "Mon profil" (obligatoires dans les deux — voir
+ * managerService.validateProfile).
  * openEditor() : le formulaire "Mon profil", ouvert depuis le haut à droite.
  * openCard(managerId) : la fiche d'un manager, ouverte en cliquant son
- * pseudo dans le classement. Tout est facultatif ; visible des comptes
- * connectés seulement, jamais du public (voir supabase/schema.sql
- * profiles_*) — et le formulaire le dit clairement avant d'enregistrer.
+ * pseudo dans le classement. Visible des comptes connectés seulement,
+ * jamais du public (voir supabase/schema.sql profiles_*) — et les
+ * formulaires le disent clairement avant d'enregistrer.
  */
 (function () {
   window.D1P = window.D1P || {};
@@ -13,6 +16,8 @@
 
   const { el } = window.D1P.utils.dom;
   const OTHER = '__other__';
+  // Enregistré tel quel (et affiché tel quel sur la fiche) : une réponse valable pour qui ne supporte aucun club.
+  const NO_CLUB = 'Aucun club';
 
   function svc() { return window.D1P.services; }
 
@@ -30,6 +35,51 @@
   }
 
   /**
+   * Les champs prénom / nom / club. `teamNames` : les clubs de D1 proposés
+   * (à l'inscription on n'est pas encore connecté, donc la liste vient de
+   * data/teams.js ; dans "Mon profil" elle vient de la base). Renvoie les
+   * nœuds à insérer et read() pour récupérer ce qui est saisi.
+   */
+  function buildFields(profile, teamNames) {
+    const current = (profile.supportedClub || '').trim();
+    const matched = teamNames.find((n) => n.trim().toLowerCase() === current.toLowerCase());
+    const initialChoice = matched || (current === NO_CLUB ? NO_CLUB : current ? OTHER : '');
+
+    const firstName = el('input', { type: 'text', maxlength: '60', placeholder: 'Ton prénom', autocomplete: 'given-name', value: profile.firstName || '' });
+    const lastName = el('input', { type: 'text', maxlength: '80', placeholder: 'Ton nom', autocomplete: 'family-name', value: profile.lastName || '' });
+    const otherClub = el('input', { type: 'text', maxlength: '80', placeholder: 'Nom du club', value: initialChoice === OTHER ? current : '' });
+    const otherField = el('div', { className: 'field', style: { display: initialChoice === OTHER ? '' : 'none' } }, [
+      el('label', {}, ['Quel club ?']), otherClub,
+    ]);
+    const clubSelect = el('select', {
+      onChange: () => { otherField.style.display = clubSelect.value === OTHER ? '' : 'none'; },
+    }, [
+      el('option', { value: '' }, ['— Choisis ton club —']),
+      ...teamNames.map((n) => el('option', { value: n }, [n])),
+      el('option', { value: OTHER }, ['Autre club…']),
+      el('option', { value: NO_CLUB }, ['Aucun club en particulier']),
+    ]);
+    clubSelect.value = initialChoice;
+
+    return {
+      nodes: [
+        el('div', { className: 'field' }, [el('label', {}, ['Prénom']), firstName]),
+        el('div', { className: 'field' }, [el('label', {}, ['Nom']), lastName]),
+        el('div', { className: 'field' }, [el('label', {}, ['Club que tu supportes']), clubSelect]),
+        otherField,
+        el('p', { className: 'field-hint' }, [
+          'Obligatoire. Ces infos sont visibles par les autres joueurs connectés (en cliquant sur ton pseudo dans le classement) et par l\'admin.',
+        ]),
+      ],
+      read: () => ({
+        firstName: firstName.value,
+        lastName: lastName.value,
+        supportedClub: clubSelect.value === OTHER ? otherClub.value : clubSelect.value,
+      }),
+    };
+  }
+
+  /**
    * Accueil (rappel "complète ton profil") et Administration (noms des
    * managers) affichent des données de profil : on les redessine après un
    * enregistrement. Pas les autres pages — redessiner Pronostics, par
@@ -42,38 +92,13 @@
 
   function openEditor() {
     const manager = svc().managerService.getActiveManager();
-    const profile = svc().managerService.getProfile(manager.id);
-    const teams = svc().seasonService.listTeams();
-
-    const matchedTeam = d1TeamByName(profile.supportedClub);
-    const initialChoice = matchedTeam ? matchedTeam.name : (profile.supportedClub ? OTHER : '');
-
-    const firstName = el('input', { type: 'text', maxlength: '60', placeholder: 'Ton prénom', value: profile.firstName });
-    const lastName = el('input', { type: 'text', maxlength: '80', placeholder: 'Ton nom', value: profile.lastName });
-    const otherClub = el('input', { type: 'text', maxlength: '80', placeholder: 'Nom du club', value: matchedTeam ? '' : profile.supportedClub });
-    const otherField = el('div', { className: 'field', style: { display: initialChoice === OTHER ? '' : 'none' } }, [
-      el('label', {}, ['Quel club ?']), otherClub,
-    ]);
-    const clubSelect = el('select', {
-      onChange: () => { otherField.style.display = clubSelect.value === OTHER ? '' : 'none'; },
-    }, [
-      el('option', { value: '' }, ['— Aucun / je ne sais pas —']),
-      ...teams.map((t) => el('option', { value: t.name }, [t.name])),
-      el('option', { value: OTHER }, ['Autre club…']),
-    ]);
-    clubSelect.value = initialChoice;
+    const fields = buildFields(svc().managerService.getProfile(manager.id), svc().seasonService.listTeams().map((t) => t.name));
 
     const body = el('div', {}, [
       el('p', { className: 'field-hint', style: { marginBottom: '14px' } }, [
         'Pseudo : ' + manager.name + ' — c\'est avec lui (et ton code) que tu te connectes, il ne change pas.',
       ]),
-      el('div', { className: 'field' }, [el('label', {}, ['Prénom']), firstName]),
-      el('div', { className: 'field' }, [el('label', {}, ['Nom']), lastName]),
-      el('div', { className: 'field' }, [el('label', {}, ['Club que tu supportes']), clubSelect]),
-      otherField,
-      el('p', { className: 'field-hint' }, [
-        'Tout est facultatif. Ces infos sont visibles par les autres joueurs connectés (en cliquant sur ton pseudo dans le classement) et par l\'admin.',
-      ]),
+      ...fields.nodes,
     ]);
 
     window.D1P.components.modal.open({
@@ -85,10 +110,7 @@
           label: 'Enregistrer', className: 'btn-primary', closeOnClick: false,
           onClick: async (btn) => {
             btn.disabled = true; btn.textContent = 'Enregistrement...';
-            const supportedClub = clubSelect.value === OTHER ? otherClub.value : clubSelect.value;
-            const res = await svc().managerService.saveProfile(manager.id, {
-              firstName: firstName.value, lastName: lastName.value, supportedClub,
-            });
+            const res = await svc().managerService.saveProfile(manager.id, fields.read());
             if (!res.ok) {
               window.D1P.components.toast.show(res.reason, 'error');
               btn.disabled = false; btn.textContent = 'Enregistrer';
@@ -142,5 +164,5 @@
     window.D1P.components.modal.open({ title: manager.name, body: el('div', {}, rows), actions });
   }
 
-  window.D1P.components.profile = { openEditor, openCard };
+  window.D1P.components.profile = { buildFields, openEditor, openCard };
 })();

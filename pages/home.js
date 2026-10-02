@@ -49,10 +49,10 @@
       quickCard('🔮', 'Ma saison', seasonLocked ? (seasonPrediction ? 'Pronostic verrouillé — voir le détail' : 'Saison commencée, trop tard') : (seasonPrediction ? 'Modifier mon pronostic' : 'Pas encore fait — à faire avant le coup d\'envoi !'), () => { window.location.hash = '#season'; }),
       quickCard('🏆', 'Classement', 'Le vrai classement du championnat, et qui devine le mieux', () => { window.location.hash = '#standings'; }),
     ];
-    // Sans ce rappel personne ne devine que la pastille en haut à droite est cliquable : il disparaît dès que prénom ET nom sont renseignés.
-    const profile = window.D1P.services.managerService.getProfile(manager.id);
-    if (!profile.firstName || !profile.lastName) {
-      cards.push(quickCard('👤', 'Complète ton profil', 'Prénom, nom et club que tu supportes — facultatif, visible des autres joueurs',
+    // Les inscrits d'avant l'obligation n'ont pas de profil, et sans ce rappel personne ne devine que la pastille en haut à droite est cliquable : il disparaît dès que prénom, nom et club sont renseignés.
+    const managers = window.D1P.services.managerService;
+    if (!managers.isProfileComplete(managers.getProfile(manager.id))) {
+      cards.push(quickCard('👤', 'Complète ton profil', 'Prénom, nom et club que tu supportes — visible des autres joueurs',
         () => window.D1P.components.profile.openEditor()));
     }
     root.appendChild(el('div', { className: 'dash-grid' }, cards));
