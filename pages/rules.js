@@ -48,7 +48,7 @@
 
     wrap.appendChild(section('🎯', 'Tes pronostics chaque semaine', [
       p('Pour chaque match d\'une journée ouverte : tu choisis qui gagne (ou match nul), puis tu peux cocher deux cases si tu penses qu\'elles vont se réaliser — "l\'équipe marque 4 essais ou plus" (bonus offensif, possible pour les deux équipes) et "écart serré de 7 points ou moins" (bonus défensif, seulement pour l\'équipe qui perd).'),
-      p('L\'admin ouvre une journée quand c\'est le moment de pronostiquer, puis la verrouille avant le coup d\'envoi — une fois verrouillée, tu ne peux plus rien changer, mais tu peux voir ce que le reste du groupe avait mis.'),
+      p(`Une journée s'ouvre quand l'admin l'ouvre. Chaque match se ferme ensuite tout seul au coup d'envoi (${S.kickoffHour}h le jour du match) : jusque-là tu peux modifier ton prono autant que tu veux, après il est verrouillé — et tu peux voir ce que le reste du groupe avait mis.`),
     ]));
 
     wrap.appendChild(section('🏆', 'Le vrai classement du championnat', [
@@ -62,7 +62,7 @@
       p('Pourquoi aussi strict ? Pour qu\'il n\'y ait aucun intérêt à cocher les cases bonus "au cas où" — une case bonus cochée à tort te fait perdre le match, donc autant réfléchir avant de cocher.'),
       p('Le classement trie par nombre de pronostics exacts, puis par pourcentage de réussite en cas d\'égalité.'),
       p(`Il démarre à la journée ${S.leaderboardFromMatchday} : les journées d'avant étaient déjà jouées quand le jeu a démarré, elles ne comptent pas — tout le monde repart de zéro.`),
-      p('Clique sur un pseudo pour voir son profil et ses pronostics, journée par journée, avec le verdict de chacun. Ils ne se dévoilent qu\'une fois la journée verrouillée ou notée — jamais avant, pour que personne ne puisse copier.'),
+      p('Clique sur un pseudo pour voir son profil et ses pronostics, journée par journée, avec le verdict de chacun. Ils ne se dévoilent qu\'au coup d\'envoi de chaque match (ou quand l\'admin verrouille la journée) — jamais avant, pour que personne ne puisse copier.'),
     ]));
 
     wrap.appendChild(section('🔮', 'Ma saison', [

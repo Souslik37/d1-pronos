@@ -190,7 +190,7 @@
         (byDay[match.matchday] = byDay[match.matchday] || []).push({ match, prediction });
         return;
       }
-      // Pas de pronostic en mémoire : il n'en a pas fait, OU la base ne nous le montre pas encore (journée dont le coup d'envoi est passé mais que l'admin n'a pas encore verrouillée — RLS ne dévoile que les journées verrouillées/notées). On ne peut l'affirmer que si personne d'autre n'apparaît non plus.
+      // Pas de pronostic en mémoire : il n'en a pas fait, OU la base ne nous le montre pas encore. RLS dévoile un match dès que son statut stocké n'est plus 'ouvert' ou que son coup d'envoi est passé (schema.sql, predictions_select_locked_matches), mais l'état n'est chargé qu'une fois au démarrage : quelqu'un connecté avant le coup d'envoi ne les a pas reçus. On ne peut l'affirmer que si personne d'autre n'apparaît non plus.
       const othersVisible = Object.keys(state.predictions[match.id] || {}).some((id) => id !== viewer.id);
       if (match.status === 'ouvert' && viewer.role !== 'admin' && !othersVisible) hiddenDays.add(match.matchday);
     });
@@ -224,7 +224,7 @@
     if (hiddenDays.size) {
       const list = Array.from(hiddenDays).sort((a, b) => a - b).join(', ');
       nodes.push(el('p', { className: 'muted small', style: { marginTop: '10px' } }, [
-        `Journée${hiddenDays.size > 1 ? 's' : ''} ${list} : les pronostics s'afficheront dès que l'admin aura verrouillé la journée ou encodé ses résultats.`,
+        `Journée${hiddenDays.size > 1 ? 's' : ''} ${list} : les pronostics se dévoilent au coup d'envoi. Recharge la page pour les voir.`,
       ]));
     }
     return el('div', {}, nodes);
