@@ -5,10 +5,11 @@
  * "Mon profil" (obligatoires dans les deux — voir
  * managerService.validateProfile).
  * openEditor() : le formulaire "Mon profil", ouvert depuis le haut à droite.
- * openCard(managerId) : la fiche d'un manager, ouverte en cliquant son
- * pseudo dans le classement. Visible des comptes connectés seulement,
- * jamais du public (voir supabase/schema.sql profiles_*) — et les
- * formulaires le disent clairement avant d'enregistrer.
+ * openCard(managerId) : la fiche d'un manager — son profil et ses pronostics
+ * dévoilés, journée par journée, avec le verdict de chacun — ouverte en
+ * cliquant son pseudo dans le classement. Visible des comptes connectés
+ * seulement, jamais du public (voir supabase/schema.sql profiles_*) — et
+ * les formulaires le disent clairement avant d'enregistrer.
  */
 (function () {
   window.D1P = window.D1P || {};
@@ -132,6 +133,103 @@
     ]);
   }
 
+  function teamName(teamId) {
+    const team = teamId ? svc().seasonService.getTeam(teamId) : null;
+    return team ? team.name : '—';
+  }
+
+  /** "Victoire ASUB · bonus off. ASUB" — marche pour un pronostic comme pour un résultat officiel (même forme). */
+  function describeOutcome(o, match) {
+    const home = teamName(match.homeTeamId);
+    const away = teamName(match.awayTeamId);
+    const parts = [o.winner === 'draw' ? 'Match nul' : 'Victoire ' + (o.winner === 'home' ? home : away)];
+    if (o.bonusHome) parts.push('bonus off. ' + home);
+    if (o.bonusAway) parts.push('bonus off. ' + away);
+    if (o.closeMargin && o.winner !== 'draw') parts.push('bonus déf. ' + (o.winner === 'home' ? away : home));
+    return parts.join(' · ');
+  }
+
+  function predictionRow(match, prediction) {
+    const scoring = svc().scoringService;
+    const graded = match.status === 'termine' && match.result;
+    const exact = graded && scoring.isPredictionExact(prediction, match.result);
+    const winnerOk = graded && scoring.isPredictionCorrect(prediction, match.result);
+    return el('div', { className: 'boost-row', style: { alignItems: 'flex-start' } }, [
+      el('div', {}, [
+        el('div', { style: { fontWeight: '650' } }, [teamName(match.homeTeamId) + ' – ' + teamName(match.awayTeamId)]),
+        el('div', { className: 'muted small' }, [describeOutcome(prediction, match)]),
+        graded && !exact ? el('div', { className: 'muted small' }, ['Réel : ' + describeOutcome(match.result, match)]) : null,
+      ]),
+      el('div', { style: { fontSize: '18px' } }, [graded ? (exact ? '✅' : winnerOk ? '🟡' : '❌') : '']),
+    ]);
+  }
+
+  /**
+   * Les pronostics d'un manager, journée par journée, du plus récent au plus
+   * ancien. Un pronostic n'apparaît qu'une fois son match plus "ouvert"
+   * (verrouillé, noté, ou coup d'envoi passé — voir seasonService.isMatchOpen)
+   * : on ne dévoile jamais ce que quelqu'un a mis tant qu'on peut encore le
+   * copier. Seulement les journées qui comptent au classement (J3 et après).
+   */
+  function buildPredictionHistory(managerId) {
+    const S = svc();
+    const viewer = S.managerService.getActiveManager();
+    const state = S.stateService.getState();
+    const start = window.D1P.data.CONFIG.season.leaderboardFromMatchday;
+    const getPrediction = (matchId) => S.predictionService.getPrediction(matchId, managerId);
+
+    const counted = S.seasonService.listCountedMatches();
+    const stats = S.scoringService.computeGuesserStats(counted, getPrediction);
+    const byDay = {};
+    const hiddenDays = new Set();
+    S.seasonService.listMatches().forEach((match) => {
+      if (match.matchday < start || !match.homeTeamId || !match.awayTeamId) return;
+      if (S.seasonService.isMatchOpen(match)) return;
+      const prediction = getPrediction(match.id);
+      if (prediction.winner !== null) {
+        (byDay[match.matchday] = byDay[match.matchday] || []).push({ match, prediction });
+        return;
+      }
+      // Pas de pronostic en mémoire : il n'en a pas fait, OU la base ne nous le montre pas encore (journée dont le coup d'envoi est passé mais que l'admin n'a pas encore verrouillée — RLS ne dévoile que les journées verrouillées/notées). On ne peut l'affirmer que si personne d'autre n'apparaît non plus.
+      const othersVisible = Object.keys(state.predictions[match.id] || {}).some((id) => id !== viewer.id);
+      if (match.status === 'ouvert' && viewer.role !== 'admin' && !othersVisible) hiddenDays.add(match.matchday);
+    });
+
+    const nodes = [
+      el('div', { className: 'muted small', style: { margin: '18px 0 6px', fontWeight: '750', textTransform: 'uppercase', letterSpacing: '.5px' } }, ['Pronostics']),
+      el('div', { style: { fontWeight: '700' } }, [
+        stats.total
+          ? `${stats.exact} exact${stats.exact > 1 ? 's' : ''} sur ${stats.total} (${stats.pct}%)`
+          : counted.length
+            ? 'Aucun pronostic sur les matchs déjà notés.'
+            : `Rien de noté pour l'instant — le classement démarre à la journée ${start}.`,
+      ]),
+      el('div', { className: 'muted small', style: { marginBottom: '4px' } }, ['✅ exact · 🟡 bon vainqueur mais bonus raté · ❌ raté']),
+    ];
+
+    const days = Object.keys(byDay).map(Number).sort((a, b) => b - a);
+    days.forEach((day) => {
+      const rows = byDay[day];
+      const gradedRows = rows.filter(({ match }) => match.status === 'termine' && match.result);
+      const exactCount = gradedRows.filter(({ match, prediction }) => S.scoringService.isPredictionExact(prediction, match.result)).length;
+      nodes.push(el('div', { className: 'muted small', style: { margin: '14px 0 2px', fontWeight: '750' } }, [
+        'Journée ' + day + (gradedRows.length ? ` — ${exactCount} exact${exactCount > 1 ? 's' : ''} sur ${gradedRows.length}` : ''),
+      ]));
+      rows.forEach(({ match, prediction }) => nodes.push(predictionRow(match, prediction)));
+    });
+
+    if (!days.length) {
+      nodes.push(el('p', { className: 'muted small', style: { marginTop: '8px' } }, ['Les pronostics d\'une journée apparaissent ici une fois la journée verrouillée ou notée.']));
+    }
+    if (hiddenDays.size) {
+      const list = Array.from(hiddenDays).sort((a, b) => a - b).join(', ');
+      nodes.push(el('p', { className: 'muted small', style: { marginTop: '10px' } }, [
+        `Journée${hiddenDays.size > 1 ? 's' : ''} ${list} : les pronostics s'afficheront dès que l'admin aura verrouillé la journée ou encodé ses résultats.`,
+      ]));
+    }
+    return el('div', {}, nodes);
+  }
+
   function openCard(managerId) {
     const manager = svc().stateService.getState().managers[managerId];
     if (!manager) return;
@@ -151,6 +249,8 @@
         ? el('span', { style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [team ? teamLogo(team, 24) : null, profile.supportedClub])
         : '—'));
     }
+
+    rows.push(buildPredictionHistory(managerId));
 
     const actions = [{ label: 'Fermer', className: 'btn-ghost' }];
     if (isSelf) {

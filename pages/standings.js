@@ -65,19 +65,12 @@
   function buildGuessersLeaderboard() {
     const startMatchday = window.D1P.data.CONFIG.season.leaderboardFromMatchday;
     const managers = window.D1P.services.managerService.listManagers();
-    const matches = window.D1P.services.seasonService.listMatches()
-      .filter((m) => m.matchday >= startMatchday && m.status === 'termine' && m.result);
+    const matches = window.D1P.services.seasonService.listCountedMatches();
 
-    const rows = managers.map((m) => {
-      let exact = 0, total = 0;
-      matches.forEach((match) => {
-        const p = window.D1P.services.predictionService.getPrediction(match.id, m.id);
-        if (p.winner === null) return;
-        total += 1;
-        if (window.D1P.services.scoringService.isPredictionExact(p, match.result)) exact += 1;
-      });
-      return { manager: m, exact, total, pct: total ? Math.round((exact / total) * 100) : null };
-    }).sort((a, b) => b.exact - a.exact || (b.pct || 0) - (a.pct || 0));
+    const rows = managers.map((m) => ({
+      manager: m,
+      ...window.D1P.services.scoringService.computeGuesserStats(matches, (matchId) => window.D1P.services.predictionService.getPrediction(matchId, m.id)),
+    })).sort((a, b) => b.exact - a.exact || (b.pct || 0) - (a.pct || 0));
 
     // Ex æquo = même rang.
     rows.forEach((r, i) => {

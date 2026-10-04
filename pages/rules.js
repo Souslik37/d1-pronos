@@ -62,6 +62,7 @@
       p('Pourquoi aussi strict ? Pour qu\'il n\'y ait aucun intérêt à cocher les cases bonus "au cas où" — une case bonus cochée à tort te fait perdre le match, donc autant réfléchir avant de cocher.'),
       p('Le classement trie par nombre de pronostics exacts, puis par pourcentage de réussite en cas d\'égalité.'),
       p(`Il démarre à la journée ${S.leaderboardFromMatchday} : les journées d'avant étaient déjà jouées quand le jeu a démarré, elles ne comptent pas — tout le monde repart de zéro.`),
+      p('Clique sur un pseudo pour voir son profil et ses pronostics, journée par journée, avec le verdict de chacun. Ils ne se dévoilent qu\'une fois la journée verrouillée ou notée — jamais avant, pour que personne ne puisse copier.'),
     ]));
 
     wrap.appendChild(section('🔮', 'Ma saison', [

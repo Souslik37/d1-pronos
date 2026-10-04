@@ -58,6 +58,17 @@
   }
 
   /**
+   * Les matchs qui comptent pour le classement "qui devine le mieux" : notés,
+   * et à partir de CONFIG.season.leaderboardFromMatchday (tout le monde repart
+   * de zéro à cette journée). Une seule définition, partagée par le
+   * classement et la fiche d'un manager.
+   */
+  function listCountedMatches() {
+    const start = window.D1P.data.CONFIG.season.leaderboardFromMatchday;
+    return listMatches().filter((m) => m.matchday >= start && m.status === 'termine' && m.result);
+  }
+
+  /**
    * La journée dont l'admin doit s'occuper : la première qui a encore au
    * moins un match pas noté (null si tout l'est). Pas currentMatchday(), faite
    * pour les joueurs — elle saute à la journée suivante dès que le coup
@@ -215,7 +226,7 @@
   }
 
   window.D1P.services.seasonService = {
-    listTeams, getTeam, listMatches, getMatch, matchesForMatchday, currentMatchday, firstUnfinishedMatchday, isMatchOpen,
+    listTeams, getTeam, listMatches, getMatch, matchesForMatchday, currentMatchday, firstUnfinishedMatchday, listCountedMatches, isMatchOpen,
     getStandingsOrder, setStandingsOrder, addTeam, renameTeam, setTeamLogo, addMatch, updateMatchInfo, removeMatch, setMatchdayStatus,
     finalizeMatch, unfinalizeMatch,
   };

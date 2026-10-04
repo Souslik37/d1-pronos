@@ -78,6 +78,24 @@
   }
 
   /**
+   * Le score d'UN manager au classement "qui devine le mieux" sur ces matchs
+   * notés : { exact, total, pct }. `total` ne compte que les matchs qu'il a
+   * pronostiqués (pas de pénalité pour un match sauté). `getPrediction(matchId)`
+   * donne son pronostic — passé en paramètre pour que ce fichier reste pur.
+   * Partagé par le classement et la fiche d'un manager : un seul calcul.
+   */
+  function computeGuesserStats(matches, getPrediction) {
+    let exact = 0, total = 0;
+    matches.forEach((match) => {
+      const p = getPrediction(match.id);
+      if (!p || p.winner === null) return;
+      total += 1;
+      if (isPredictionExact(p, match.result)) exact += 1;
+    });
+    return { exact, total, pct: total ? Math.round((exact / total) * 100) : null };
+  }
+
+  /**
    * Le classement réel, entièrement recalculé à partir des matchs déjà
    * joués (jamais stocké nulle part — une seule source de vérité : les
    * résultats des matchs) : points, joués, victoires/nuls/défaites. Pas de
@@ -115,5 +133,5 @@
       .sort((a, b) => b.points - a.points || rankOf(a) - rankOf(b) || b.won - a.won || a.team.name.localeCompare(b.team.name, 'fr'));
   }
 
-  window.D1P.services.scoringService = { computePoints, isPredictionCorrect, isPredictionExact, computeStandingsTable };
+  window.D1P.services.scoringService = { computePoints, isPredictionCorrect, isPredictionExact, computeGuesserStats, computeStandingsTable };
 })();
