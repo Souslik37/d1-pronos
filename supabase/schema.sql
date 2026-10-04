@@ -148,14 +148,26 @@ create policy "matches_admin_write" on matches for all using (
 -- Predictions : chacun lit/écrit les siens ; un admin peut tout lire et
 -- tout écrire (y compris INSÉRER pour un AUTRE manager — sert à rattraper
 -- un pronostic jamais soumis correctement, pas seulement à corriger un
--- existant). Une fois qu'un match n'est plus "ouvert", tout le monde peut
--- lire les pronostics de tout le monde pour CE match (jamais tant qu'il
--- est encore ouvert, pour ne pas pouvoir copier).
+-- existant). Les pronostics de tout le monde deviennent lisibles par tous
+-- pour CE match dès qu'il n'est plus "ouvert" OU que son coup d'envoi est
+-- passé (jamais avant, pour ne pas pouvoir copier). Le second critère évite
+-- de dépendre de l'admin : à 15h le jour du match, les pronos se dévoilent
+-- seuls, sans attendre qu'il pense à cliquer "Verrouiller". Le 15:00 est écrit
+-- en dur : à garder aligné avec CONFIG.season.kickoffHour (data/config.js),
+-- qui fait le même calcul côté appli (seasonService.isMatchOpen). Heure de
+-- Bruxelles. Sans date (playoff pas encore programmé), seul le statut compte.
 create policy "predictions_select_own_or_admin" on predictions for select using (
   auth.uid() = manager_id or exists (select 1 from managers where id = auth.uid() and role = 'admin')
 );
 create policy "predictions_select_locked_matches" on predictions for select using (
-  exists (select 1 from matches where id = predictions.match_id and status <> 'ouvert')
+  exists (
+    select 1 from matches
+    where matches.id = predictions.match_id
+      and (
+        matches.status <> 'ouvert'
+        or (matches.date is not null and matches.date + time '15:00' <= (now() at time zone 'Europe/Brussels'))
+      )
+  )
 );
 create policy "predictions_insert_own_or_admin" on predictions for insert with check (
   auth.uid() = manager_id or exists (select 1 from managers where id = auth.uid() and role = 'admin')
