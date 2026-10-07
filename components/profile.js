@@ -264,5 +264,5 @@
     window.D1P.components.modal.open({ title: manager.name, body: el('div', {}, rows), actions });
   }
 
-  window.D1P.components.profile = { buildFields, openEditor, openCard };
+  window.D1P.components.profile = { buildFields, openEditor, openCard, describeOutcome };
 })();
