@@ -20,7 +20,8 @@
     const day = DAYS[d.getDay()];
     const month = MONTHS[d.getMonth()];
     if (opts.short) return `${d.getDate()} ${month.slice(0, 3)}`;
-    return `${opts.capitalize === false ? day : day[0].toUpperCase() + day.slice(1)} ${d.getDate()} ${month} ${d.getFullYear()}`;
+    const dayLabel = opts.capitalize === false ? day : day[0].toUpperCase() + day.slice(1);
+    return opts.noYear ? `${dayLabel} ${d.getDate()} ${month}` : `${dayLabel} ${d.getDate()} ${month} ${d.getFullYear()}`;
   }
 
   /**

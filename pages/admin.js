@@ -445,12 +445,19 @@
   // ── Saison ────────────────────────────────────────────────────────────
   function buildSeasonSection(root, rerender) {
     const locked = window.D1P.services.seasonPredictionService.isSeasonLocked();
+    // Rien ne se ferme tout seul à la date annoncée aux joueurs (CONFIG.season.seasonPredictionsDeadline) : ce rappel est là pour que tu penses à cliquer.
+    const dl = window.D1P.services.seasonPredictionService.deadline();
+    const openText = !dl
+      ? 'Les pronostics de saison sont encore ouverts. Verrouille-les quand tu veux les fermer : plus personne ne pourra en soumettre ni modifier le sien.'
+      : dl.passed
+        ? 'Les pronostics de saison sont encore ouverts, alors que la date annoncée aux joueurs (' + dl.long + ') est passée : pense à les verrouiller.'
+        : 'Les pronostics de saison sont encore ouverts. Date annoncée aux joueurs : ' + dl.long + ' — verrouille-les ce jour-là (rien ne se ferme tout seul) : plus personne ne pourra en soumettre ni modifier le sien.';
     root.appendChild(el('div', { className: 'section-title' }, ['🔮 Pronostics de saison']));
     root.appendChild(el('div', { className: 'card', style: { marginBottom: '10px' } }, [
       el('p', { className: 'small', style: { marginBottom: '10px' } }, [
         locked
           ? 'Les pronostics de saison sont verrouillés — plus personne ne peut soumettre ou modifier le sien.'
-          : 'Les pronostics de saison sont encore ouverts. Verrouille-les une fois la journée 1 lancée, pour que personne ne puisse encore changer d\'avis après coup.',
+          : openText,
       ]),
       el('button', {
         className: 'btn btn-sm' + (locked ? ' btn-ghost' : ' btn-primary'),

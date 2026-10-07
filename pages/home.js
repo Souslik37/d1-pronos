@@ -24,13 +24,20 @@
   function seasonBanner(prediction) {
     const go = () => { window.location.hash = '#season'; };
     const draft = !!prediction;
+    // Date limite annoncée (CONFIG.season.seasonPredictionsDeadline) ; sans elle, ou une fois passée, un texte sans date.
+    const deadline = window.D1P.services.seasonPredictionService.upcomingDeadline();
+    const text = draft
+      ? (deadline
+        ? 'Il est enregistré en brouillon : valide-le avant le ' + deadline.long + ', date de fermeture des pronostics de saison.'
+        : 'Il est enregistré en brouillon : valide-le avant que l\'admin ne ferme les pronostics de saison.')
+      : (deadline
+        ? 'Le classement final et les playoffs, c\'est rapide. Tu as jusqu\'au ' + deadline.long + ' : ensuite, les pronostics de saison seront fermés.'
+        : 'Le classement final et les playoffs, c\'est rapide. À faire dès que possible : quand l\'admin fermera les pronostics de saison, il sera trop tard.');
     return el('div', { className: 'banner-warn', role: 'status', onClick: go }, [
       el('div', { className: 'banner-warn-icon' }, ['🔮']),
       el('div', { className: 'banner-warn-text' }, [
         el('div', { className: 'banner-warn-title' }, [draft ? 'Ton pronostic de saison n\'est pas encore validé' : 'Tu n\'as pas encore fait ton pronostic de saison']),
-        el('div', {}, [draft
-          ? 'Il est enregistré en brouillon : valide-le avant que l\'admin ne ferme les pronostics de saison.'
-          : 'Le classement final et les playoffs, c\'est rapide. À faire dès que possible : quand l\'admin fermera les pronostics de saison, il sera trop tard.']),
+        el('div', {}, [text]),
       ]),
       el('button', { className: 'btn btn-sm btn-primary', onClick: (e) => { e.stopPropagation(); go(); } }, [draft ? 'Le valider' : 'Le faire maintenant']),
     ]);
@@ -59,11 +66,12 @@
     const seasonLocked = window.D1P.services.seasonPredictionService.isSeasonLocked();
     const seasonPrediction = window.D1P.services.seasonPredictionService.getSeasonPrediction(manager.id);
     const seasonValidated = !!(seasonPrediction && seasonPrediction.locked);
+    const deadline = window.D1P.services.seasonPredictionService.upcomingDeadline();
     const seasonText = seasonLocked
-      ? (seasonPrediction ? 'Pronostic verrouillé — voir le détail' : 'Saison commencée, trop tard')
+      ? (seasonPrediction ? 'Pronostic verrouillé — voir le détail' : 'Pronostics de saison fermés')
       : seasonValidated ? 'Pronostic validé ✅ — voir le détail'
-      : seasonPrediction ? 'Brouillon — à valider'
-      : 'Pas encore fait — à faire dès que possible';
+      : seasonPrediction ? 'Brouillon — à valider' + (deadline ? ' avant le ' + deadline.short : '')
+      : 'Pas encore fait — ' + (deadline ? 'jusqu\'au ' + deadline.short : 'à faire dès que possible');
 
     root.innerHTML = '';
     root.appendChild(el('div', { className: 'page-header' }, [

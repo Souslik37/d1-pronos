@@ -26,6 +26,9 @@
   function render(root) {
     const S = window.D1P.data.CONFIG.season;
     const P = window.D1P.data.CONFIG.points;
+    // Date limite du pronostic de saison annoncée aux joueurs (null si aucune, ou déjà passée sans que l'admin ait encore verrouillé).
+    const deadline = window.D1P.services.seasonPredictionService.upcomingDeadline();
+    const seasonUntil = deadline ? 'jusqu\'au ' + deadline.long : 'tant que l\'admin ne l\'a pas fermé';
 
     root.innerHTML = '';
     root.appendChild(el('div', { className: 'page-header' }, [
@@ -37,7 +40,7 @@
 
     wrap.appendChild(section('🏉', 'Le principe', [
       p('D1 Pronos, c\'est du pronostic pur sur tout le championnat de Belgique D1 — pas de fantasy, pas de joueurs à choisir : juste deviner qui va gagner, semaine après semaine.'),
-      p('Deux jeux en un : les pronostics de chaque journée (ci-dessous), et un pronostic unique pour toute la saison à faire avant le coup d\'envoi (voir "Ma saison").'),
+      p(`Deux jeux en un : les pronostics de chaque journée (ci-dessous), et un pronostic unique pour toute la saison, à faire ${seasonUntil} (voir "Ma saison").`),
     ]));
 
     wrap.appendChild(section('📅', 'Le championnat', [
@@ -67,8 +70,11 @@
     ]));
 
     wrap.appendChild(section('🔮', 'Ma saison', [
-      p('Avant le début de la saison (ou tant que l\'admin n\'a pas fermé les pronostics de saison), tu pronostiques UNE FOIS le classement final complet des 10 équipes, puis le tableau des playoffs qui en découle (quarts, demies, finale).'),
+      p(deadline
+        ? `Jusqu'au ${deadline.long} — l'admin ferme alors les pronostics de saison —, tu pronostiques UNE FOIS le classement final complet des 10 équipes, puis le tableau des playoffs qui en découle (quarts, demies, finale).`
+        : 'Tant que l\'admin n\'a pas fermé les pronostics de saison, tu pronostiques UNE FOIS le classement final complet des 10 équipes, puis le tableau des playoffs qui en découle (quarts, demies, finale).'),
       p('Tu peux enregistrer un brouillon et le modifier autant que tu veux, jusqu\'à ce que tu valides définitivement — à partir de là, c\'est verrouillé, seul l\'admin peut le débloquer en cas d\'erreur.'),
+      p('Une fois les pronostics de saison fermés, plus personne ne peut en faire ni en modifier — y compris ceux qui rejoignent le jeu plus tard. Ils jouent alors normalement les pronostics de chaque journée : seul celui de la saison leur est fermé.'),
       p('En fin de saison, l\'admin encode le vrai classement final et le vrai tableau des playoffs, et ton pronostic est comparé automatiquement : nombre d\'équipes placées exactement au bon rang, nombre de tours de playoffs correctement devinés, et si tu avais le bon champion.'),
     ]));
 

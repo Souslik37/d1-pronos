@@ -26,6 +26,11 @@
       // (les inscrits étaient nombreux, impossible de les pronostiquer à
       // armes égales), donc tout le monde repart de zéro à la journée 3.
       leaderboardFromMatchday: 3,
+      // Date limite ANNONCÉE aux joueurs pour le pronostic de saison (jusqu'à ce
+      // jour inclus). Elle n'enferme rien toute seule : l'admin ferme ensuite les
+      // pronostics de saison d'un clic (Administration → Pronostics de saison).
+      // Passée, ou mise à null, les textes retombent sur une version sans date.
+      seasonPredictionsDeadline: '2026-10-18',
     },
 
     // Système de points de classement standard (rugby à XV, bonus offensif/

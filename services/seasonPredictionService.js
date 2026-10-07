@@ -16,6 +16,31 @@
     return !!window.D1P.services.stateService.getState().seasonLocked;
   }
 
+  /**
+   * La date limite annoncée aux joueurs (CONFIG.season.seasonPredictionsDeadline) :
+   * { iso, long: "dimanche 18 octobre", short: "18 oct", passed } — null si
+   * aucune n'est configurée. Elle n'enferme rien : seul le verrou de l'admin ferme.
+   */
+  function deadline() {
+    const iso = window.D1P.data.CONFIG.season.seasonPredictionsDeadline;
+    if (!iso) return null;
+    const fmt = window.D1P.utils.format;
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const todayIso = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    return {
+      iso, passed: todayIso > iso,
+      long: fmt.formatDateFr(iso, { capitalize: false, noYear: true }),
+      short: fmt.formatDateFr(iso, { short: true }),
+    };
+  }
+
+  /** Comme deadline(), mais null une fois la date passée : aux joueurs, mieux vaut un texte sans date qu'une date périmée (l'admin n'a juste pas encore cliqué "Verrouiller"). */
+  function upcomingDeadline() {
+    const d = deadline();
+    return d && !d.passed ? d : null;
+  }
+
   function getSeasonPrediction(managerId) {
     const state = window.D1P.services.stateService.getState();
     return state.seasonPredictions[managerId] || null;
@@ -89,7 +114,7 @@
     opts = opts || {};
     const manager = window.D1P.services.managerService.getActiveManager();
     if (isPredictionLocked(manager.id)) {
-      return { ok: false, reason: isSeasonLocked() ? 'Les pronostics de saison sont fermés — la saison a commencé.' : 'Ton pronostic est déjà validé — demande à l\'admin de le déverrouiller si tu dois le corriger.' };
+      return { ok: false, reason: isSeasonLocked() ? 'Les pronostics de saison sont fermés.' :'Ton pronostic est déjà validé — demande à l\'admin de le déverrouiller si tu dois le corriger.' };
     }
 
     const teams = window.D1P.services.seasonService.listTeams();
@@ -181,7 +206,7 @@
   }
 
   window.D1P.services.seasonPredictionService = {
-    isSeasonLocked, isPredictionLocked, getSeasonPrediction, listSeasonPredictions,
+    isSeasonLocked, isPredictionLocked, getSeasonPrediction, listSeasonPredictions, deadline, upcomingDeadline,
     emptyBracket, bracketMatchups, sanitizeBracket, bracketIsComplete,
     saveSeasonPrediction, setLocked, unlockPrediction, scoreSeasonPrediction, setFinalResult,
   };

@@ -1,12 +1,13 @@
 /**
  * D1 Pronos — Page "Ma saison" (pronostic de saison complète)
  *
- * Un seul pronostic par manager, avant le début de la saison régulière :
+ * Un seul pronostic par manager, jusqu'à ce que l'admin ferme les pronostics
+ * de saison (date annoncée : CONFIG.season.seasonPredictionsDeadline) :
  * classement final des 10 équipes + tableau complet des playoffs (voir
  * seasonPredictionService.bracketMatchups pour le format exact). Peut être
  * enregistré comme brouillon à volonté, puis validé DÉFINITIVEMENT par le
  * manager lui-même — verrouille sa propre ligne (indépendamment du verrou
- * global de saison, activé par l'admin une fois la journée 1 lancée).
+ * global de saison, activé par l'admin).
  */
 (function () {
   window.D1P = window.D1P || {};
@@ -186,13 +187,13 @@
     if (!prediction) {
       root.appendChild(el('div', { className: 'empty-state' }, [
         el('div', { className: 'ic' }, ['😅']),
-        el('div', {}, ['La saison a commencé et tu n\'avais pas fait de pronostic — ce sera pour la saison prochaine !']),
+        el('div', {}, ['Les pronostics de saison sont fermés et tu n\'avais pas fait le tien — ce sera pour la saison prochaine ! Tu continues bien sûr à jouer les pronostics de chaque journée.']),
       ]));
       return;
     }
 
     const reasons = [];
-    if (window.D1P.services.seasonPredictionService.isSeasonLocked()) reasons.push('la saison a commencé');
+    if (window.D1P.services.seasonPredictionService.isSeasonLocked()) reasons.push('l\'admin les a fermés');
     if (prediction.locked) reasons.push('tu l\'as validé définitivement');
 
     root.appendChild(el('div', { className: 'card', style: { marginBottom: '16px' } }, [
@@ -240,9 +241,10 @@
 
   function render(root) {
     root.innerHTML = '';
+    const deadline = window.D1P.services.seasonPredictionService.upcomingDeadline();
     root.appendChild(el('div', { className: 'page-header' }, [
       el('h1', {}, ['🔮 Ma saison']),
-      el('p', {}, ['Un seul pronostic, avant le coup d\'envoi — le classement final complet et le tableau des playoffs.']),
+      el('p', {}, ['Un seul pronostic pour toute la saison' + (deadline ? ', jusqu\'au ' + deadline.long : '') + ' — le classement final complet et le tableau des playoffs.']),
     ]));
 
     const manager = window.D1P.services.managerService.getActiveManager();
