@@ -414,11 +414,13 @@
     managers.forEach((m) => {
       const isSelf = m.id === activeManager.id;
       const profile = window.D1P.services.managerService.getProfile(m.id);
-      const details = [window.D1P.services.managerService.fullName(profile), profile.supportedClub].filter(Boolean).join(' · ');
+      const fmt = window.D1P.utils.format;
+      const registered = m.createdAt ? 'Inscrit le ' + fmt.formatTimestampDate(m.createdAt) : '';
+      const details = [window.D1P.services.managerService.fullName(profile), profile.supportedClub, registered].filter(Boolean).join(' · ');
       list.appendChild(el('div', { className: 'boost-row' }, [
         el('div', {}, [
           el('div', { className: 'boost-label' }, [m.name]),
-          details ? el('div', { className: 'muted small' }, [details]) : null,
+          details ? el('div', { className: 'muted small', title: m.createdAt ? registered + ' à ' + fmt.formatTimestampTime(m.createdAt) : null }, [details]) : null,
         ]),
         el('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } }, [
           m.role === 'admin' ? el('span', { className: 'badge badge-yellow' }, ['Admin']) : null,

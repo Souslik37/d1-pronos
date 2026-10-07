@@ -977,3 +977,45 @@ textarea { resize: vertical; min-height: 70px; }
   .dash-grid { grid-template-columns: 1fr; }
   .dash-grid .span-2, .dash-grid .span-4 { grid-column: span 1; }
 }
+
+/* ============================================================
+   Contact, bandeau jaune de l'Accueil, détail "Par match"
+   ============================================================ */
+.mail-link { color: var(--green-text); font-weight: 650; text-decoration: underline; text-underline-offset: 2px; }
+.mail-link:hover { color: var(--green-dark); }
+
+/* Bandeau d'alerte jaune : pronostic de saison pas encore validé (voir pages/home.js). */
+.banner-warn {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--yellow-bg); border: 1px solid rgba(184, 131, 10, .35); border-radius: var(--radius-md);
+  padding: 14px 18px; margin-bottom: 18px; cursor: pointer;
+  font-size: 13px; line-height: 1.45; color: var(--text-1);
+}
+.banner-warn-icon { font-size: 26px; flex: none; }
+.banner-warn-text { flex: 1; min-width: 0; }
+.banner-warn-title { font-weight: 800; color: var(--text-0); margin-bottom: 2px; }
+.banner-warn .btn { flex: none; }
+
+/* Classement → Par match : une carte par match noté. */
+.pm-card { padding: 18px 20px; }
+.pm-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 800; }
+.pm-vs { color: var(--text-3); font-weight: 650; }
+.pm-names { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.pm-names .badge { cursor: pointer; }
+.pm-group { margin-top: 10px; }
+.pm-group summary { cursor: pointer; font-size: 12.5px; font-weight: 700; color: var(--text-1); }
+
+/* Trois onglets au Classement : on défile plutôt que de déborder de l'écran. */
+.tabs { max-width: 100%; overflow-x: auto; }
+.tab-btn { white-space: nowrap; }
+
+@media (max-width: 760px) {
+  .banner-warn { flex-wrap: wrap; }
+  .banner-warn .btn { width: 100%; }
+  .tab-btn { padding: 9px 6px; font-size: 12px; }
+}
+
+/* Petits téléphones : sans les émojis des onglets, les trois tiennent côte à côte. */
+@media (max-width: 420px) {
+  .tab-ic { display: none; }
+}

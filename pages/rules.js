@@ -10,7 +10,7 @@
   window.D1P = window.D1P || {};
   window.D1P.pages = window.D1P.pages || {};
 
-  const { el } = window.D1P.utils.dom;
+  const { el, mailLink } = window.D1P.utils.dom;
 
   function section(icon, title, children) {
     return el('div', {}, [
@@ -63,12 +63,20 @@
       p('Le classement trie par nombre de pronostics exacts, puis par pourcentage de réussite en cas d\'égalité.'),
       p(`Il démarre à la journée ${S.leaderboardFromMatchday} : les journées d'avant étaient déjà jouées quand le jeu a démarré, elles ne comptent pas — tout le monde repart de zéro.`),
       p('Clique sur un pseudo pour voir son profil et ses pronostics, journée par journée, avec le verdict de chacun. Ils ne se dévoilent qu\'au coup d\'envoi de chaque match (ou quand l\'admin verrouille la journée) — jamais avant, pour que personne ne puisse copier.'),
+      p('L\'onglet « Par match » du Classement détaille chaque match noté : qui avait tout juste, qui avait le bon vainqueur mais a raté un bonus, et qui s\'est trompé.'),
     ]));
 
     wrap.appendChild(section('🔮', 'Ma saison', [
       p('Avant le début de la saison (ou tant que l\'admin n\'a pas fermé les pronostics de saison), tu pronostiques UNE FOIS le classement final complet des 10 équipes, puis le tableau des playoffs qui en découle (quarts, demies, finale).'),
       p('Tu peux enregistrer un brouillon et le modifier autant que tu veux, jusqu\'à ce que tu valides définitivement — à partir de là, c\'est verrouillé, seul l\'admin peut le débloquer en cas d\'erreur.'),
       p('En fin de saison, l\'admin encode le vrai classement final et le vrai tableau des playoffs, et ton pronostic est comparé automatiquement : nombre d\'équipes placées exactement au bon rang, nombre de tours de playoffs correctement devinés, et si tu avais le bon champion.'),
+    ]));
+
+    // Pas de mail de récupération dans ce jeu (pseudo + code à 4 chiffres, voir authService) : un code oublié passe forcément par l'admin.
+    const email = window.D1P.data.CONFIG.contact.email;
+    wrap.appendChild(section('📬', 'Un souci, une question ?', [
+      el('p', { className: 'small', style: { marginBottom: '10px' } }, ['Mot de passe ou pseudo oublié ? Une question, une remarque, une idée pour améliorer le jeu ? Écris à Alexandre : ', mailLink(email), '.']),
+      p('Si tu as perdu ton code, donne-lui ton pseudo (jamais le code lui-même) : il t\'aidera à retrouver l\'accès.'),
     ]));
 
     root.appendChild(wrap);

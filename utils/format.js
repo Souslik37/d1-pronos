@@ -23,6 +23,21 @@
     return `${opts.capitalize === false ? day : day[0].toUpperCase() + day.slice(1)} ${d.getDate()} ${month} ${d.getFullYear()}`;
   }
 
+  /**
+   * "12/09/2026" et "14:32" pour un horodatage complet (ex: l'inscription).
+   * Toujours à l'heure de Bruxelles, pas celle de l'appareil : c'est un moment
+   * précis, pas une date de calendrier comme formatDateFr.
+   */
+  function formatTimestampDate(ts) {
+    if (!ts) return '';
+    return new Date(ts).toLocaleDateString('fr-BE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Brussels' });
+  }
+
+  function formatTimestampTime(ts) {
+    if (!ts) return '';
+    return new Date(ts).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Brussels' });
+  }
+
   function clamp(n, min, max) {
     return Math.max(min, Math.min(max, n));
   }
@@ -31,5 +46,5 @@
     return (n > 0 ? '+' : '') + n;
   }
 
-  window.D1P.utils.format = { parseIsoDate, formatDateFr, clamp, formatSigned };
+  window.D1P.utils.format = { parseIsoDate, formatDateFr, formatTimestampDate, formatTimestampTime, clamp, formatSigned };
 })();

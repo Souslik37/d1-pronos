@@ -15,6 +15,27 @@
     ]);
   }
 
+  /**
+   * Bandeau jaune tant que le pronostic de saison n'est pas VALIDÉ : pas encore
+   * fait, ou brouillon jamais verrouillé par son auteur. Il disparaît tout seul
+   * dès qu'il est validé, ou quand l'admin ferme les pronostics de saison pour
+   * tout le monde (trop tard pour tous, il n'y a plus rien à relancer).
+   */
+  function seasonBanner(prediction) {
+    const go = () => { window.location.hash = '#season'; };
+    const draft = !!prediction;
+    return el('div', { className: 'banner-warn', role: 'status', onClick: go }, [
+      el('div', { className: 'banner-warn-icon' }, ['🔮']),
+      el('div', { className: 'banner-warn-text' }, [
+        el('div', { className: 'banner-warn-title' }, [draft ? 'Ton pronostic de saison n\'est pas encore validé' : 'Tu n\'as pas encore fait ton pronostic de saison']),
+        el('div', {}, [draft
+          ? 'Il est enregistré en brouillon : valide-le avant que l\'admin ne ferme les pronostics de saison.'
+          : 'Le classement final et les playoffs, c\'est rapide. À faire dès que possible : quand l\'admin fermera les pronostics de saison, il sera trop tard.']),
+      ]),
+      el('button', { className: 'btn btn-sm btn-primary', onClick: (e) => { e.stopPropagation(); go(); } }, [draft ? 'Le valider' : 'Le faire maintenant']),
+    ]);
+  }
+
   function render(root) {
     const manager = window.D1P.services.managerService.getActiveManager();
     // Toutes les journées OUVERTES à la fois, pas juste "la" journée
@@ -37,16 +58,23 @@
         : 'Tous tes pronostics sont faits ✅';
     const seasonLocked = window.D1P.services.seasonPredictionService.isSeasonLocked();
     const seasonPrediction = window.D1P.services.seasonPredictionService.getSeasonPrediction(manager.id);
+    const seasonValidated = !!(seasonPrediction && seasonPrediction.locked);
+    const seasonText = seasonLocked
+      ? (seasonPrediction ? 'Pronostic verrouillé — voir le détail' : 'Saison commencée, trop tard')
+      : seasonValidated ? 'Pronostic validé ✅ — voir le détail'
+      : seasonPrediction ? 'Brouillon — à valider'
+      : 'Pas encore fait — à faire dès que possible';
 
     root.innerHTML = '';
     root.appendChild(el('div', { className: 'page-header' }, [
       el('h1', {}, ['Salut ' + manager.name + ' 👋']),
       el('p', {}, ['Pronostics purs sur tout le championnat de Belgique D1 — pas de points compliqués, juste qui gagne.']),
     ]));
+    if (!seasonLocked && !seasonValidated) root.appendChild(seasonBanner(seasonPrediction));
 
     const cards = [
       quickCard('🎯', 'Journée ' + targetMatchday, matchdayText, () => { window.D1P.pages.matchday.goTo(targetMatchday); window.location.hash = '#matchday'; }),
-      quickCard('🔮', 'Ma saison', seasonLocked ? (seasonPrediction ? 'Pronostic verrouillé — voir le détail' : 'Saison commencée, trop tard') : (seasonPrediction ? 'Modifier mon pronostic' : 'Pas encore fait — à faire avant le coup d\'envoi !'), () => { window.location.hash = '#season'; }),
+      quickCard('🔮', 'Ma saison', seasonText, () => { window.location.hash = '#season'; }),
       quickCard('🏆', 'Classement', 'Le vrai classement du championnat, et qui devine le mieux', () => { window.location.hash = '#standings'; }),
     ];
     // Les inscrits d'avant l'obligation n'ont pas de profil, et sans ce rappel personne ne devine que la pastille en haut à droite est cliquable : il disparaît dès que prénom, nom et club sont renseignés.

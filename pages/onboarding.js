@@ -12,7 +12,7 @@
   window.D1P = window.D1P || {};
   window.D1P.pages = window.D1P.pages || {};
 
-  const { el } = window.D1P.utils.dom;
+  const { el, mailLink } = window.D1P.utils.dom;
 
   function mount(root) {
     let mode = 'signup'; // 'signup' | 'login'
@@ -76,6 +76,8 @@
         el('div', { className: 'field' }, [el('label', {}, ['Pseudo']), nameInput]),
         el('div', { className: 'field' }, [el('label', {}, ['Ton code à 4 chiffres']), pinField]),
         submitBtn,
+        // Quelqu'un qui a oublié son code ne peut pas ouvrir l'onglet Règles (il faut être connecté) : c'est ici qu'il doit trouver comment s'en sortir.
+        el('p', { className: 'field-hint', style: { marginTop: '16px', textAlign: 'center' } }, ['Pseudo ou code oublié ? Écris à ', mailLink(window.D1P.data.CONFIG.contact.email), '.']),
       ]);
     }
 
@@ -125,7 +127,7 @@
         el('div', { className: 'field-hint', style: { marginTop: '-10px', marginBottom: '14px' } }, ['* à bien retenir : c\'est lui, avec ton code, qui te sert à te reconnecter.']),
         el('div', { className: 'field' }, [el('label', {}, ['Ton code à 4 chiffres']), pinField]),
         el('div', { className: 'field' }, [el('label', {}, ['Confirme le code']), pinConfirmField]),
-        el('div', { className: 'field-hint', style: { marginBottom: '14px' } }, ['Retiens bien ce code : il n\'y a pas de mail de récupération, il faudra demander à l\'admin de le réinitialiser si tu l\'oublies.']),
+        el('div', { className: 'field-hint', style: { marginBottom: '14px' } }, ['Retiens bien ce code : il n\'y a pas de mail de récupération. Si tu l\'oublies, écris à ', mailLink(window.D1P.data.CONFIG.contact.email), ' pour le réinitialiser.']),
         el('h2', { style: { fontSize: '14px', fontWeight: '800', margin: '18px 0 12px' } }, ['Et toi, c\'est qui ?']),
         ...profileFields.nodes,
         submitBtn,

@@ -61,5 +61,10 @@
     return String(str).replace(/[&<>"']/g, (ch) => ESCAPE_MAP[ch]);
   }
 
-  window.D1P.utils.dom = { qs, qsa, el, clear, escapeHtml };
+  /** Lien "écrire un mail" — l'adresse vient de CONFIG.contact.email, jamais écrite en dur dans une page. */
+  function mailLink(email, label) {
+    return el('a', { href: 'mailto:' + email, className: 'mail-link' }, [label || email]);
+  }
+
+  window.D1P.utils.dom = { qs, qsa, el, clear, escapeHtml, mailLink };
 })();

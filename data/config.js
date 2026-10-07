@@ -43,5 +43,9 @@
       closeLossMargin: 7, // défaite par 7 points d'écart ou moins
       closeLossPoints: 1,
     },
+
+    // Adresse montrée aux joueurs (page Règles, écran de connexion) pour un
+    // code ou un pseudo oublié, une question, une remarque.
+    contact: { email: 'leclercq.alexandre@outlook.com' },
   };
 })();

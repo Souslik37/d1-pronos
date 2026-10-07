@@ -13,7 +13,7 @@
   }
 
   function managerRowToApp(row) {
-    return { id: row.id, name: row.name, role: row.role };
+    return { id: row.id, name: row.name, role: row.role, createdAt: row.created_at || null };
   }
 
   function teamRowToApp(row) {
