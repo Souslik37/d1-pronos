@@ -1019,3 +1019,12 @@ textarea { resize: vertical; min-height: 70px; }
 @media (max-width: 420px) {
   .tab-ic { display: none; }
 }
+
+/* Classement du championnat : une ligne se clique pour ouvrir les résultats de l'équipe (le survol est déjà géré par `tr:hover td`). */
+.standings-table tbody tr.clickable { cursor: pointer; }
+
+/* Sur téléphone, le tableau à 7 colonnes était plus large que sa carte et faisait défiler la page de côté. */
+@media (max-width: 760px) {
+  .standings-card { padding-left: 14px; padding-right: 14px; }
+  .standings-table th, .standings-table td { padding-left: 5px; padding-right: 5px; }
+}

@@ -133,5 +133,34 @@
       .sort((a, b) => b.points - a.points || rankOf(a) - rankOf(b) || b.won - a.won || a.team.name.localeCompare(b.team.name, 'fr'));
   }
 
-  window.D1P.services.scoringService = { computePoints, isPredictionCorrect, isPredictionExact, computeGuesserStats, computeStandingsTable };
+  /**
+   * Les résultats déjà joués d'UNE équipe, du plus récent au plus ancien : pour
+   * chaque match noté, de quel côté elle jouait, qui elle affrontait, le
+   * résultat ('W' victoire, 'D' nul, 'L' défaite) et les points qu'il lui a
+   * rapportés au classement (base + éventuel bonus). Passe par computePoints,
+   * comme computeStandingsTable, donc la somme des points d'ici est toujours
+   * celle du tableau — y compris le plafond belge d'un seul bonus par match :
+   * `offensiveBonus` / `defensiveBonus` disent quelles conditions l'équipe
+   * remplissait, `bonus` (0 ou 1) ce qui lui a réellement été compté.
+   */
+  function computeTeamResults(teamId, matches) {
+    const P = CONFIG().points;
+    return matches
+      .filter((m) => m.status === 'termine' && m.result && (m.homeTeamId === teamId || m.awayTeamId === teamId))
+      .map((m) => {
+        const side = m.homeTeamId === teamId ? 'home' : 'away';
+        const outcome = m.result.winner === 'draw' ? 'D' : (m.result.winner === side ? 'W' : 'L');
+        const base = outcome === 'W' ? P.win : outcome === 'D' ? P.draw : P.loss;
+        const points = computePoints(m.result)[side];
+        return {
+          match: m, side, outcome, base, points, bonus: points - base,
+          opponentId: side === 'home' ? m.awayTeamId : m.homeTeamId,
+          offensiveBonus: !!(side === 'home' ? m.result.bonusHome : m.result.bonusAway),
+          defensiveBonus: outcome === 'L' && !!m.result.closeMargin,
+        };
+      })
+      .sort((a, b) => b.match.matchday - a.match.matchday || (b.match.date || '').localeCompare(a.match.date || '') || b.match.id.localeCompare(a.match.id));
+  }
+
+  window.D1P.services.scoringService = { computePoints, isPredictionCorrect, isPredictionExact, computeGuesserStats, computeStandingsTable, computeTeamResults };
 })();

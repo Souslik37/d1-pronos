@@ -26,7 +26,69 @@
   function teamCell(team) {
     const wrap = el('span', {});
     wrap.innerHTML = window.D1P.utils.avatar.renderAvatar(team.name, team.logoUrl, 26, { square: true });
-    return el('td', {}, [el('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700' } }, [wrap, team.name])]);
+    // Souligné en pointillés comme les pseudos du classement des pronostics : le nom se clique.
+    const name = el('span', { style: { textDecoration: 'underline dotted', textUnderlineOffset: '3px' } }, [team.name]);
+    return el('td', {}, [el('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700' } }, [wrap, name])]);
+  }
+
+  const ordinal = (n) => (n === 1 ? '1er' : n + 'e');
+  const plural = (n, word) => n + ' ' + word + (n > 1 ? 's' : '');
+  const OUTCOME_BADGE = { W: ['Victoire', 'badge-green'], D: ['Match nul', 'badge-yellow'], L: ['Défaite', 'badge-red'] };
+
+  /** "4 + 1 bonus offensif" — au plus UN bonus compté (règle belge), même si l'équipe remplissait les deux conditions. null s'il n'y a pas de bonus. */
+  function pointsDetail(res) {
+    if (!res.bonus) return null;
+    const label = res.offensiveBonus && res.defensiveBonus ? 'bonus offensif ou défensif (un seul compte)'
+      : res.offensiveBonus ? 'bonus offensif' : 'bonus défensif';
+    return res.base + ' + ' + res.bonus + ' ' + label;
+  }
+
+  /** Une ligne de la fiche d'une équipe : l'adversaire et où ça se jouait, le résultat, les points marqués. */
+  function teamResultRow(res) {
+    const S = window.D1P.services;
+    const opponent = S.seasonService.getTeam(res.opponentId);
+    const [label, cls] = OUTCOME_BADGE[res.outcome];
+    const detail = pointsDetail(res);
+    const when = [
+      'J' + res.match.matchday,
+      res.match.date ? window.D1P.utils.format.formatDateFr(res.match.date, { short: true }) : null,
+      res.side === 'home' ? 'à domicile' : 'à l\'extérieur',
+    ].filter(Boolean).join(' · ');
+    return el('div', { className: 'boost-row', style: { alignItems: 'flex-start' } }, [
+      el('div', {}, [
+        el('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '650' } }, [opponent ? teamLogo(opponent, 22) : null, 'vs ' + (opponent ? opponent.name : '—')]),
+        el('div', { className: 'muted small', style: { marginTop: '2px' } }, [when]),
+      ]),
+      el('div', { style: { textAlign: 'right' } }, [
+        el('span', { className: 'badge ' + cls }, [label]),
+        el('div', { style: { fontWeight: '800', color: 'var(--green-text)', marginTop: '4px' } }, [plural(res.points, 'pt')]),
+        detail ? el('div', { className: 'muted small' }, [detail]) : null,
+      ]),
+    ]);
+  }
+
+  /**
+   * La fiche d'une équipe : son rang et son bilan, puis ses matchs déjà joués,
+   * du plus récent au plus ancien. Ce sont des résultats "vainqueur + bonus"
+   * (aucun score n'est saisi dans ce jeu, voir scoringService) ; tous les matchs
+   * notés comptent, J1 et J2 compris, comme dans le tableau.
+   */
+  function openTeamResults(row, rank) {
+    const S = window.D1P.services;
+    const results = S.scoringService.computeTeamResults(row.team.id, S.seasonService.listMatches());
+    const body = el('div', {}, [
+      el('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' } }, [
+        teamLogo(row.team, 44),
+        el('div', {}, [
+          el('div', { style: { fontWeight: '800' } }, [ordinal(rank) + ' · ' + plural(row.points, 'pt')]),
+          el('div', { className: 'muted small' }, [[plural(row.played, 'match'), plural(row.won, 'victoire'), plural(row.drawn, 'nul'), plural(row.lost, 'défaite')].join(' · ')]),
+        ]),
+      ]),
+      results.length
+        ? el('div', {}, results.map(teamResultRow))
+        : el('p', { className: 'muted small', style: { marginTop: '8px' } }, ['Aucun match joué pour l\'instant.']),
+    ]);
+    window.D1P.components.modal.open({ title: row.team.name, body, actions: [{ label: 'Fermer', className: 'btn-ghost' }] });
   }
 
   function buildRealStandings() {
@@ -37,17 +99,23 @@
     if (!table.length) return el('div', { className: 'empty-state' }, [el('div', { className: 'ic' }, ['🏆']), el('div', {}, ['Aucune équipe pour le moment.'])]);
 
     const headers = ['#', 'Équipe', 'Pts', 'J', 'G', 'N', 'P'];
-    return el('table', { className: 'standings-table' }, [
-      el('thead', {}, [el('tr', {}, headers.map((h) => el('th', {}, [h])))]),
-      el('tbody', {}, table.map((r, i) => el('tr', {}, [
-        el('td', {}, [rankBadge(i)]),
-        teamCell(r.team),
-        el('td', { style: { fontWeight: '800', color: 'var(--green-text)' } }, [String(r.points)]),
-        el('td', {}, [String(r.played)]),
-        el('td', {}, [String(r.won)]),
-        el('td', {}, [String(r.drawn)]),
-        el('td', {}, [String(r.lost)]),
-      ]))),
+    return el('div', {}, [
+      el('p', { className: 'field-hint', style: { marginBottom: '10px' } }, ['Clique sur une équipe pour voir ses résultats, match par match.']),
+      // Sur un très petit écran, le tableau défile dans sa carte plutôt que de faire défiler toute la page.
+      el('div', { style: { overflowX: 'auto' } }, [el('table', { className: 'standings-table' }, [
+        el('thead', {}, [el('tr', {}, headers.map((h) => el('th', {}, [h])))]),
+        el('tbody', {}, table.map((r, i) => el('tr', {
+          className: 'clickable', title: 'Voir les résultats de ' + r.team.name, onClick: () => openTeamResults(r, i + 1),
+        }, [
+          el('td', {}, [rankBadge(i)]),
+          teamCell(r.team),
+          el('td', { style: { fontWeight: '800', color: 'var(--green-text)' } }, [String(r.points)]),
+          el('td', {}, [String(r.played)]),
+          el('td', {}, [String(r.won)]),
+          el('td', {}, [String(r.drawn)]),
+          el('td', {}, [String(r.lost)]),
+        ]))),
+      ])]),
     ]);
   }
 
@@ -117,9 +185,9 @@
     ]);
   }
 
-  function teamLogo(team) {
+  function teamLogo(team, size) {
     const wrap = el('span', {});
-    wrap.innerHTML = window.D1P.utils.avatar.renderAvatar(team.name, team.logoUrl, 24, { square: true });
+    wrap.innerHTML = window.D1P.utils.avatar.renderAvatar(team.name, team.logoUrl, size || 24, { square: true });
     return wrap;
   }
 
@@ -214,7 +282,7 @@
     }, [el('span', { className: 'tab-ic' }, [icon + ' ']), label]))));
     // "Par match" dessine ses propres cartes (une par match) : pas de grande carte autour.
     if (activeTab === 'byMatch') root.appendChild(buildByMatch(() => render(root)));
-    else root.appendChild(el('div', { className: 'card' }, [activeTab === 'real' ? buildRealStandings() : buildGuessersLeaderboard()]));
+    else root.appendChild(el('div', { className: 'card standings-card' }, [activeTab === 'real' ? buildRealStandings() : buildGuessersLeaderboard()]));
   }
 
   window.D1P.pages.standings = { render };

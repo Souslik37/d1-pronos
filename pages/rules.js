@@ -57,6 +57,7 @@
     wrap.appendChild(section('🏆', 'Le vrai classement du championnat', [
       p(`Système de points standard du rugby : victoire = ${P.win} points, match nul = ${P.draw} points, défaite = ${P.loss} point. Une équipe qui marque ${P.tryBonusThreshold} essais ou plus dans le match gagne ${P.tryBonusPoints} point de bonus (bonus offensif), et une équipe qui perd par ${P.closeLossMargin} points d\'écart ou moins gagne aussi ${P.closeLossPoints} point (bonus défensif).`),
       p('⚠️ Règle belge : une équipe ne cumule jamais les deux bonus sur le même match. Même si elle remplit les deux conditions (elle marque assez d\'essais ET perd de peu), elle ne gagne qu\'un seul point de bonus au maximum.'),
+      p('Dans l\'onglet « Championnat » du Classement, clique sur une équipe pour voir ses résultats match par match : victoire, nul ou défaite, et les points marqués avec le détail du bonus.'),
     ]));
 
     wrap.appendChild(section('🎯', 'Classement "Qui devine le mieux"', [
