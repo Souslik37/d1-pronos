@@ -3,7 +3,7 @@
  *
  * Trois vues : le VRAI classement du championnat (recalculé à partir des
  * matchs joués, jamais stocké — voir scoringService.computeStandingsTable),
- * le compteur de qui devine le mieux — "X pronostics exacts sur Y" : un
+ * le compteur de qui devine le mieux (filtrable par journée) — "X pronostics exacts sur Y" : un
  * match ne compte que si TOUT est juste (vainqueur + les deux bonus), voir
  * scoringService.isPredictionExact pour pourquoi (sinon cocher les bonus
  * "au cas où" ne coûterait jamais rien) — et son détail "Par match" : pour
@@ -17,6 +17,7 @@
   const { el } = window.D1P.utils.dom;
   let activeTab = 'guessers';
   let selectedMatchday = null; // journée affichée dans "Par match" ; null = la dernière journée notée
+  let guessersMatchday = null; // journée filtrée dans "Qui devine le mieux" ; null = classement général (depuis la journée de départ)
 
   function rankBadge(i) {
     const cls = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
@@ -126,22 +127,44 @@
     return el('span', { className: 'rank-badge' + medal }, [String(row.rank)]);
   }
 
+  /** " — 18 oct" : la date d'une journée (celle de son premier match noté), pour les menus. */
+  function matchdayDateLabel(counted, md) {
+    const first = counted.find((m) => m.matchday === md);
+    return first && first.date ? ' — ' + window.D1P.utils.format.formatDateFr(first.date, { short: true }) : '';
+  }
+
   /**
    * Affiché dès le départ (tout le monde à 0) plutôt que masqué tant
    * qu'aucun match n'est noté, et ne compte que les matchs à partir de
    * CONFIG.season.leaderboardFromMatchday — tout le monde repart de zéro à
    * cette journée, même si des pronostics plus anciens existent ou si les
    * résultats de J1/J2 sont encodés pour le vrai classement du championnat.
+   *
+   * Filtrable par journée : "Général" (tout depuis la journée de départ),
+   * "Dernière journée" (la plus récente déjà notée, en un clic) ou n'importe
+   * quelle journée notée. Même calcul partout (computeGuesserStats) : seuls
+   * les matchs pris en compte changent.
    */
-  function buildGuessersLeaderboard() {
+  function buildGuessersLeaderboard(rerender) {
+    const S = window.D1P.services;
     const startMatchday = window.D1P.data.CONFIG.season.leaderboardFromMatchday;
-    const managers = window.D1P.services.managerService.listManagers();
-    const matches = window.D1P.services.seasonService.listCountedMatches();
+    const managers = S.managerService.listManagers();
+    const counted = S.seasonService.listCountedMatches();
 
-    const rows = managers.map((m) => ({
+    const matchdays = [...new Set(counted.map((m) => m.matchday))].sort((a, b) => a - b);
+    const last = matchdays.length ? matchdays[matchdays.length - 1] : null;
+    if (guessersMatchday !== null && !matchdays.includes(guessersMatchday)) guessersMatchday = null;
+    const filtered = guessersMatchday !== null;
+    const matches = filtered ? counted.filter((m) => m.matchday === guessersMatchday) : counted;
+
+    let rows = managers.map((m) => ({
       manager: m,
-      ...window.D1P.services.scoringService.computeGuesserStats(matches, (matchId) => window.D1P.services.predictionService.getPrediction(matchId, m.id)),
-    })).sort((a, b) => b.exact - a.exact || (b.pct || 0) - (a.pct || 0));
+      ...S.scoringService.computeGuesserStats(matches, (matchId) => S.predictionService.getPrediction(matchId, m.id)),
+    }));
+    // Sur une seule journée, ceux qui n'ont rien pronostiqué ne sont pas des "0 / 0" à lister : on les compte à part.
+    const silent = filtered ? rows.filter((r) => r.total === 0).length : 0;
+    if (filtered) rows = rows.filter((r) => r.total > 0);
+    rows.sort((a, b) => b.exact - a.exact || (b.pct || 0) - (a.pct || 0));
 
     // Ex æquo = même rang.
     rows.forEach((r, i) => {
@@ -149,22 +172,50 @@
       r.rank = prev && prev.exact === r.exact && (prev.pct || 0) === (r.pct || 0) ? prev.rank : i + 1;
     });
 
+    const pick = (md) => {
+      guessersMatchday = md;
+      if (md !== null) selectedMatchday = md; // l'onglet "Par match" s'ouvre alors sur la même journée
+      rerender();
+    };
+    const filterBar = matchdays.length ? el('div', { className: 'toolbar', style: { marginBottom: '12px' } }, [
+      el('span', { className: 'chip' + (!filtered ? ' active' : ''), onClick: () => pick(null) }, ['Général']),
+      el('span', { className: 'chip' + (guessersMatchday === last ? ' active' : ''), onClick: () => pick(last) }, ['Dernière journée (J' + last + ')']),
+      el('select', {
+        title: 'Voir une journée en particulier', onChange: (e) => pick(Number(e.target.value)),
+        style: { width: 'auto', padding: '6px 12px', fontSize: '12px', fontWeight: '650', borderRadius: '20px' },
+      }, [
+        el('option', { value: '', disabled: true, selected: !filtered }, ['Une autre journée…']),
+        ...matchdays.slice().reverse().map((md) => el('option', { value: md, selected: md === guessersMatchday }, ['Journée ' + md + matchdayDateLabel(counted, md)])),
+      ]),
+    ]) : null;
+
+    let hint;
+    if (filtered) {
+      const pending = S.seasonService.matchesForMatchday(guessersMatchday).filter((m) => !(m.status === 'termine' && m.result)).length;
+      const n = matches.length;
+      hint = `Journée ${guessersMatchday} — ${n} match${n > 1 ? 's' : ''} noté${n > 1 ? 's' : ''}` + (pending ? `, ${pending} pas encore noté${pending > 1 ? 's' : ''}` : '')
+        + '. Seuls les joueurs qui ont pronostiqué cette journée apparaissent' + (silent ? ` (${silent} n'${silent > 1 ? 'ont' : 'a'} rien pronostiqué).` : '.');
+    } else {
+      hint = `Le classement démarre à la journée ${startMatchday} : tout le monde repart de zéro. Un match ne compte que si tout est deviné juste — vainqueur ET bonus (voir l'onglet Règles).`;
+    }
+
+    const table = rows.length ? el('table', { className: 'standings-table' }, [
+      el('thead', {}, [el('tr', {}, ['#', 'Manager', 'Pronostics exacts', '%'].map((h) => el('th', {}, [h])))]),
+      el('tbody', {}, rows.map((r) => el('tr', {}, [
+        el('td', {}, [guesserRankBadge(r, matches.length > 0)]),
+        el('td', { style: { fontWeight: '700' } }, [el('span', {
+          title: 'Voir le profil', style: { cursor: 'pointer', textDecoration: 'underline dotted', textUnderlineOffset: '3px' },
+          onClick: () => window.D1P.components.profile.openCard(r.manager.id),
+        }, [r.manager.name])]),
+        el('td', { style: { fontWeight: '800', color: 'var(--green-text)' } }, [`${r.exact} / ${r.total}`]),
+        el('td', { className: 'muted' }, [r.pct === null ? '—' : r.pct + '%']),
+      ]))),
+    ]) : el('p', { className: 'muted small', style: { padding: '14px 0' } }, ['Personne n\'a pronostiqué cette journée.']);
+
     return el('div', {}, [
-      el('p', { className: 'field-hint', style: { marginBottom: '10px' } }, [
-        `Le classement démarre à la journée ${startMatchday} : tout le monde repart de zéro. Un match ne compte que si tout est deviné juste — vainqueur ET bonus (voir l'onglet Règles).`,
-      ]),
-      el('table', { className: 'standings-table' }, [
-        el('thead', {}, [el('tr', {}, ['#', 'Manager', 'Pronostics exacts', '%'].map((h) => el('th', {}, [h])))]),
-        el('tbody', {}, rows.map((r) => el('tr', {}, [
-          el('td', {}, [guesserRankBadge(r, matches.length > 0)]),
-          el('td', { style: { fontWeight: '700' } }, [el('span', {
-            title: 'Voir le profil', style: { cursor: 'pointer', textDecoration: 'underline dotted', textUnderlineOffset: '3px' },
-            onClick: () => window.D1P.components.profile.openCard(r.manager.id),
-          }, [r.manager.name])]),
-          el('td', { style: { fontWeight: '800', color: 'var(--green-text)' } }, [`${r.exact} / ${r.total}`]),
-          el('td', { className: 'muted' }, [r.pct === null ? '—' : r.pct + '%']),
-        ]))),
-      ]),
+      filterBar,
+      el('p', { className: 'field-hint', style: { marginBottom: '10px' } }, [hint]),
+      table,
     ]);
   }
 
@@ -249,10 +300,7 @@
     const matchdays = [...new Set(counted.map((m) => m.matchday))].sort((a, b) => a - b);
     if (selectedMatchday === null || !matchdays.includes(selectedMatchday)) selectedMatchday = matchdays[matchdays.length - 1];
 
-    const dateOf = (md) => {
-      const first = counted.find((m) => m.matchday === md);
-      return first && first.date ? ' — ' + window.D1P.utils.format.formatDateFr(first.date, { short: true }) : '';
-    };
+    const dateOf = (md) => matchdayDateLabel(counted, md);
     const select = el('select', {
       style: { maxWidth: '260px' },
       onChange: (e) => { selectedMatchday = Number(e.target.value); rerender(); },
@@ -282,7 +330,7 @@
     }, [el('span', { className: 'tab-ic' }, [icon + ' ']), label]))));
     // "Par match" dessine ses propres cartes (une par match) : pas de grande carte autour.
     if (activeTab === 'byMatch') root.appendChild(buildByMatch(() => render(root)));
-    else root.appendChild(el('div', { className: 'card standings-card' }, [activeTab === 'real' ? buildRealStandings() : buildGuessersLeaderboard()]));
+    else root.appendChild(el('div', { className: 'card standings-card' }, [activeTab === 'real' ? buildRealStandings() : buildGuessersLeaderboard(() => render(root))]));
   }
 
   window.D1P.pages.standings = { render };

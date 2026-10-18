@@ -66,6 +66,7 @@
       p('Pourquoi aussi strict ? Pour qu\'il n\'y ait aucun intérêt à cocher les cases bonus "au cas où" — une case bonus cochée à tort te fait perdre le match, donc autant réfléchir avant de cocher.'),
       p('Le classement trie par nombre de pronostics exacts, puis par pourcentage de réussite en cas d\'égalité.'),
       p(`Il démarre à la journée ${S.leaderboardFromMatchday} : les journées d'avant étaient déjà jouées quand le jeu a démarré, elles ne comptent pas — tout le monde repart de zéro.`),
+      p('Pour savoir qui a le mieux pronostiqué une semaine précise, filtre le classement par journée : « Dernière journée » d\'un clic, ou n\'importe quelle autre journée déjà notée dans le menu.'),
       p('Clique sur un pseudo pour voir son profil et ses pronostics, journée par journée, avec le verdict de chacun. Ils ne se dévoilent qu\'au coup d\'envoi de chaque match (ou quand l\'admin verrouille la journée) — jamais avant, pour que personne ne puisse copier.'),
       p('L\'onglet « Par match » du Classement détaille chaque match noté : qui avait tout juste, qui avait le bon vainqueur mais a raté un bonus, et qui s\'est trompé.'),
     ]));
